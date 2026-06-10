@@ -9,15 +9,18 @@ import (
 )
 
 type Config struct {
-	AppPort         string
-	AppEnv          string
-	DBHost          string
-	DBPort          string
-	DBUser          string
-	DBPassword      string
-	DBName          string
-	JWTSecret       string
-	JWTExpiresHours int
+	AppPort            string
+	AppEnv             string
+	DBHost             string
+	DBPort             string
+	DBUser             string
+	DBPassword         string
+	DBName             string
+	JWTSecret          string
+	JWTExpiresHours    int
+	MidtransServerKey  string
+	MidtransClientKey  string
+	MidtransProduction bool
 }
 
 func Load() (*Config, error) {
@@ -34,8 +37,11 @@ func Load() (*Config, error) {
 		DBUser:          getEnv("DB_USER", "postgres"),
 		DBPassword:      getEnv("DB_PASSWORD", ""),
 		DBName:          getEnv("DB_NAME", "leadflow"),
-		JWTSecret:       getEnv("JWT_SECRET", ""),
-		JWTExpiresHours: expiresHours,
+		JWTSecret:          getEnv("JWT_SECRET", ""),
+		JWTExpiresHours:    expiresHours,
+		MidtransServerKey:  getEnv("MIDTRANS_SERVER_KEY", ""),
+		MidtransClientKey:  getEnv("MIDTRANS_CLIENT_KEY", ""),
+		MidtransProduction: getEnv("MIDTRANS_ENV", "sandbox") == "production",
 	}
 
 	if cfg.JWTSecret == "" {

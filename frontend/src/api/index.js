@@ -5,6 +5,10 @@ export const register = (data) => api.post('/auth/register', data)
 export const login = (data) => api.post('/auth/login', data)
 export const getMe = () => api.get('/auth/me')
 
+// Plan & Payment
+export const getPlan = () => api.get('/plan')
+export const createPayment = (plan) => api.post('/payment/create', { plan })
+
 // Stages
 export const getStages = () => api.get('/stages')
 

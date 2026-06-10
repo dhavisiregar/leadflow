@@ -14,8 +14,6 @@ type LeadHandler struct {
 	DB *gorm.DB
 }
 
-const freePlanLeadLimit = 50
-
 // GET /api/v1/leads
 func (h *LeadHandler) List(c echo.Context) error {
 	tenantID := c.Get("tenant_id").(uint)
@@ -56,11 +54,15 @@ func (h *LeadHandler) Create(c echo.Context) error {
 	tenantID := c.Get("tenant_id").(uint)
 	ownerID := c.Get("user_id").(uint)
 
-	// Enforce free plan limit
 	var tenant model.Tenant
 	h.DB.First(&tenant, tenantID)
-	if tenant.Plan == model.PlanFree && tenant.LeadsCount >= freePlanLeadLimit {
-		return echo.NewHTTPError(http.StatusPaymentRequired, "free plan limit reached (50 leads). Please upgrade.")
+	if !tenant.CanAddLead() {
+		l := model.Limits[tenant.Plan]
+		return echo.NewHTTPError(http.StatusPaymentRequired, map[string]interface{}{
+			"message": "lead limit reached. Please upgrade.",
+			"limit":   l.MaxLeads,
+			"plan":    tenant.Plan,
+		})
 	}
 
 	var lead model.Lead

@@ -44,6 +44,13 @@ func main() {
 	activityH := &handler.ActivityHandler{DB: db}
 	dashH := &handler.DashboardHandler{DB: db}
 	stageH := &handler.StageHandler{DB: db}
+	planH := &handler.PlanHandler{DB: db}
+	paymentH := &handler.PaymentHandler{
+		DB:         db,
+		ServerKey:  cfg.MidtransServerKey,
+		ClientKey:  cfg.MidtransClientKey,
+		Production: cfg.MidtransProduction,
+	}
 
 	// ── Routes ────────────────────────────────────────────────────────────────
 	api := e.Group("/api/v1")
@@ -58,6 +65,9 @@ func main() {
 
 	protected.GET("/dashboard/stats", dashH.Stats)
 
+	protected.GET("/plan", planH.Get)
+	protected.POST("/payment/create", paymentH.Create)
+	api.POST("/payment/webhook", paymentH.Webhook)
 	protected.GET("/stages", stageH.List)
 
 	protected.GET("/leads", leadH.List)

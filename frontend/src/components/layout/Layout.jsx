@@ -1,16 +1,24 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
-import { LayoutDashboard, Kanban, Users, LogOut, Zap } from 'lucide-react'
+import { LayoutDashboard, Kanban, Users, LogOut, Zap, CreditCard } from 'lucide-react'
+import { getPlan } from '../../api'
 
 const nav = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', end: true },
   { to: '/pipeline', icon: Kanban, label: 'Pipeline' },
   { to: '/contacts', icon: Users, label: 'Contacts' },
+  { to: '/billing', icon: CreditCard, label: 'Billing' },
 ]
 
 export default function Layout() {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
+  const [planData, setPlanData] = useState(null)
+
+  useEffect(() => {
+    getPlan().then((res) => setPlanData(res.data)).catch(() => {})
+  }, [])
 
   const handleSignOut = () => {
     signOut()
@@ -52,15 +60,31 @@ export default function Layout() {
           ))}
         </nav>
 
-        {/* User */}
-        <div className="px-3 py-4 border-t border-gray-100">
+        {/* Plan usage + user */}
+        <div className="px-3 py-4 border-t border-gray-100 space-y-3">
+          {planData && planData.limits?.MaxLeads > 0 && (
+            <div className="px-3">
+              <div className="flex justify-between text-[10px] text-gray-400 mb-1">
+                <span>Leads</span>
+                <span>{planData.leads_count}/{planData.limits.MaxLeads}</span>
+              </div>
+              <div className="w-full bg-gray-100 rounded-full h-1">
+                <div
+                  className={`h-1 rounded-full ${
+                    (planData.leads_count / planData.limits.MaxLeads) >= 0.9 ? 'bg-red-400' : 'bg-brand-500'
+                  }`}
+                  style={{ width: `${Math.min((planData.leads_count / planData.limits.MaxLeads) * 100, 100)}%` }}
+                />
+              </div>
+            </div>
+          )}
           <div className="flex items-center gap-3 px-3 py-2">
             <div className="w-7 h-7 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 text-xs font-bold">
               {user?.name?.[0]?.toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-gray-900 truncate">{user?.name}</p>
-              <p className="text-xs text-gray-400 truncate">{user?.tenant?.plan || 'free'} plan</p>
+              <p className="text-xs text-gray-400 capitalize truncate">{planData?.plan || user?.tenant?.plan || 'free'} plan</p>
             </div>
             <button onClick={handleSignOut} className="text-gray-400 hover:text-gray-600 transition-colors">
               <LogOut size={14} />

@@ -6,6 +6,7 @@ import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import Pipeline from './pages/Pipeline'
 import Contacts from './pages/Contacts'
+import Billing from './pages/Billing'
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -30,6 +31,7 @@ export default function App() {
             <Route index element={<Dashboard />} />
             <Route path="pipeline" element={<Pipeline />} />
             <Route path="contacts" element={<Contacts />} />
+            <Route path="billing" element={<Billing />} />
           </Route>
         </Routes>
       </BrowserRouter>

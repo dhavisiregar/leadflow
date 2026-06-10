@@ -5,6 +5,9 @@ export const register = (data) => api.post('/auth/register', data)
 export const login = (data) => api.post('/auth/login', data)
 export const getMe = () => api.get('/auth/me')
 
+// Stages
+export const getStages = () => api.get('/stages')
+
 // Leads
 export const getLeads = (params) => api.get('/leads', { params })
 export const getLead = (id) => api.get(`/leads/${id}`)

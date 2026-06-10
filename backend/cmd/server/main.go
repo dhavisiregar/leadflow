@@ -43,6 +43,7 @@ func main() {
 	contactH := &handler.ContactHandler{DB: db}
 	activityH := &handler.ActivityHandler{DB: db}
 	dashH := &handler.DashboardHandler{DB: db}
+	stageH := &handler.StageHandler{DB: db}
 
 	// ── Routes ────────────────────────────────────────────────────────────────
 	api := e.Group("/api/v1")
@@ -56,6 +57,8 @@ func main() {
 	protected.GET("/auth/me", authH.Me)
 
 	protected.GET("/dashboard/stats", dashH.Stats)
+
+	protected.GET("/stages", stageH.List)
 
 	protected.GET("/leads", leadH.List)
 	protected.POST("/leads", leadH.Create)

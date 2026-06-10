@@ -80,7 +80,7 @@ type Stage struct {
 type Lead struct {
 	ID        uint           `gorm:"primaryKey" json:"id"`
 	TenantID  uint           `gorm:"not null;index" json:"tenant_id"`
-	ContactID uint           `json:"contact_id"`
+	ContactID *uint          `json:"contact_id"`
 	Contact   *Contact       `gorm:"foreignKey:ContactID" json:"contact,omitempty"`
 	StageID   uint           `gorm:"not null" json:"stage_id"`
 	Stage     *Stage         `gorm:"foreignKey:StageID" json:"stage,omitempty"`

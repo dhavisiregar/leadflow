@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -71,6 +72,7 @@ func (h *LeadHandler) Create(c echo.Context) error {
 	lead.OwnerID = ownerID
 
 	if err := h.DB.Create(&lead).Error; err != nil {
+		log.Printf("create lead error: %v | lead: %+v", err, lead)
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to create lead")
 	}
 

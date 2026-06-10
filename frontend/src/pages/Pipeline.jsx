@@ -1,15 +1,7 @@
 import { useEffect, useState } from 'react'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
-import { getLeads, getStats, moveLead, createLead, deleteLead } from '../api'
-import { Plus, Trash2, DollarSign, X } from 'lucide-react'
-
-const DEFAULT_STAGES = [
-  { id: 1, name: 'New Lead', color: '#718096' },
-  { id: 2, name: 'Contacted', color: '#3182CE' },
-  { id: 3, name: 'Negotiation', color: '#D69E2E' },
-  { id: 4, name: 'Won', color: '#38A169' },
-  { id: 5, name: 'Lost', color: '#E53E3E' },
-]
+import { getLeads, getStages, moveLead, createLead, updateLead, deleteLead } from '../api'
+import { Plus, Trash2, DollarSign, X, Pencil } from 'lucide-react'
 
 function formatIDR(val) {
   if (!val) return null
@@ -75,20 +67,80 @@ function AddLeadModal({ stageId, stages, onClose, onCreated }) {
   )
 }
 
+function EditLeadModal({ lead, stages, onClose, onUpdated }) {
+  const [form, setForm] = useState({ title: lead.title, value: lead.value || '', notes: lead.notes || '', stage_id: lead.stage_id })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleSubmit = async () => {
+    if (!form.title.trim()) return setError('Title is required')
+    setLoading(true)
+    try {
+      const res = await updateLead(lead.id, { ...form, value: parseFloat(form.value) || 0, stage_id: parseInt(form.stage_id) })
+      onUpdated(res.data)
+      onClose()
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to update lead')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+      <div className="card w-full max-w-sm p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-semibold text-gray-900">Edit Lead</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
+        </div>
+
+        {error && <div className="mb-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</div>}
+
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Title *</label>
+            <input className="input" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Value (IDR)</label>
+            <input className="input" type="number" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Stage</label>
+            <select className="input" value={form.stage_id} onChange={(e) => setForm({ ...form, stage_id: e.target.value })}>
+              {stages.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Notes</label>
+            <textarea className="input resize-none" rows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+          </div>
+        </div>
+
+        <div className="flex gap-2 mt-5">
+          <button className="btn-secondary flex-1" onClick={onClose}>Cancel</button>
+          <button className="btn-primary flex-1" onClick={handleSubmit} disabled={loading}>
+            {loading ? 'Saving...' : 'Save changes'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Pipeline() {
   const [leads, setLeads] = useState([])
-  const [stages, setStages] = useState(DEFAULT_STAGES)
+  const [stages, setStages] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [activeStage, setActiveStage] = useState(null)
+  const [editingLead, setEditingLead] = useState(null)
 
   useEffect(() => {
-    Promise.all([getLeads(), getStats()])
-      .then(([leadsRes, statsRes]) => {
+    Promise.all([getLeads(), getStages()])
+      .then(([leadsRes, stagesRes]) => {
         setLeads(leadsRes.data)
-        if (statsRes.data.leads_by_stage?.length > 0) {
-          // Keep stages from backend if available
-        }
+        setStages(stagesRes.data)
       })
       .finally(() => setLoading(false))
   }, [])
@@ -119,6 +171,7 @@ export default function Pipeline() {
   }
 
   const handleCreated = (lead) => setLeads((prev) => [...prev, lead])
+  const handleUpdated = (lead) => setLeads((prev) => prev.map((l) => l.id === lead.id ? lead : l))
 
   if (loading) return <div className="p-8 text-sm text-gray-400">Loading pipeline...</div>
 
@@ -181,12 +234,20 @@ export default function Pipeline() {
                             >
                               <div className="flex items-start justify-between gap-2">
                                 <p className="font-medium text-gray-900 leading-snug">{lead.title}</p>
-                                <button
-                                  onClick={() => handleDelete(lead.id)}
-                                  className="text-gray-300 hover:text-red-400 transition-colors flex-shrink-0 mt-0.5"
-                                >
-                                  <Trash2 size={12} />
-                                </button>
+                                <div className="flex items-center gap-1 flex-shrink-0 mt-0.5">
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setEditingLead(lead) }}
+                                    className="text-gray-300 hover:text-brand-500 transition-colors"
+                                  >
+                                    <Pencil size={12} />
+                                  </button>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); handleDelete(lead.id) }}
+                                    className="text-gray-300 hover:text-red-400 transition-colors"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                </div>
                               </div>
                               {lead.value > 0 && (
                                 <p className="text-gray-400 mt-1.5 flex items-center gap-1">
@@ -220,6 +281,15 @@ export default function Pipeline() {
           stages={stages}
           onClose={() => setShowModal(false)}
           onCreated={handleCreated}
+        />
+      )}
+
+      {editingLead && (
+        <EditLeadModal
+          lead={editingLead}
+          stages={stages}
+          onClose={() => setEditingLead(null)}
+          onUpdated={handleUpdated}
         />
       )}
     </div>

@@ -66,7 +66,9 @@ func main() {
 	protected.GET("/dashboard/stats", dashH.Stats)
 
 	protected.GET("/plan", planH.Get)
+	protected.POST("/plan/downgrade", planH.Downgrade)
 	protected.POST("/payment/create", paymentH.Create)
+	protected.POST("/payment/verify", paymentH.Verify)
 	api.POST("/payment/webhook", paymentH.Webhook)
 	protected.GET("/stages", stageH.List)
 

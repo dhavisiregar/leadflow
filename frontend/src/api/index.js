@@ -8,6 +8,8 @@ export const getMe = () => api.get('/auth/me')
 // Plan & Payment
 export const getPlan = () => api.get('/plan')
 export const createPayment = (plan) => api.post('/payment/create', { plan })
+export const verifyPayment = (order_id) => api.post('/payment/verify', { order_id })
+export const downgradePlan = (plan) => api.post('/plan/downgrade', { plan })
 
 // Stages
 export const getStages = () => api.get('/stages')

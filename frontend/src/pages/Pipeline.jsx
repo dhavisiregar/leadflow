@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
-import { getLeads, getStages, moveLead, createLead, updateLead, deleteLead } from '../api'
+import { getLeads, getStages, getContacts, moveLead, createLead, updateLead, deleteLead } from '../api'
 import { Plus, Trash2, DollarSign, X, Pencil } from 'lucide-react'
 
 function formatIDR(val) {
@@ -8,8 +8,8 @@ function formatIDR(val) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val)
 }
 
-function AddLeadModal({ stageId, stages, onClose, onCreated }) {
-  const [form, setForm] = useState({ title: '', value: '', stage_id: stageId })
+function AddLeadModal({ stageId, stages, contacts, onClose, onCreated }) {
+  const [form, setForm] = useState({ title: '', value: '', stage_id: stageId, contact_id: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -17,7 +17,13 @@ function AddLeadModal({ stageId, stages, onClose, onCreated }) {
     if (!form.title.trim()) return setError('Title is required')
     setLoading(true)
     try {
-      const res = await createLead({ ...form, value: parseFloat(form.value) || 0, stage_id: parseInt(form.stage_id) })
+      const payload = {
+        ...form,
+        value: parseFloat(form.value) || 0,
+        stage_id: parseInt(form.stage_id),
+        contact_id: form.contact_id ? parseInt(form.contact_id) : null,
+      }
+      const res = await createLead(payload)
       onCreated(res.data)
       onClose()
     } catch (err) {
@@ -44,6 +50,15 @@ function AddLeadModal({ stageId, stages, onClose, onCreated }) {
               value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
           </div>
           <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Contact</label>
+            <select className="input" value={form.contact_id} onChange={(e) => setForm({ ...form, contact_id: e.target.value })}>
+              <option value="">— No contact —</option>
+              {contacts.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}{c.company ? ` · ${c.company}` : ''}</option>
+              ))}
+            </select>
+          </div>
+          <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Value (IDR)</label>
             <input className="input" type="number" placeholder="5000000"
               value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} />
@@ -67,8 +82,14 @@ function AddLeadModal({ stageId, stages, onClose, onCreated }) {
   )
 }
 
-function EditLeadModal({ lead, stages, onClose, onUpdated }) {
-  const [form, setForm] = useState({ title: lead.title, value: lead.value || '', notes: lead.notes || '', stage_id: lead.stage_id })
+function EditLeadModal({ lead, stages, contacts, onClose, onUpdated }) {
+  const [form, setForm] = useState({
+    title: lead.title,
+    value: lead.value || '',
+    notes: lead.notes || '',
+    stage_id: lead.stage_id,
+    contact_id: lead.contact_id || '',
+  })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -76,7 +97,13 @@ function EditLeadModal({ lead, stages, onClose, onUpdated }) {
     if (!form.title.trim()) return setError('Title is required')
     setLoading(true)
     try {
-      const res = await updateLead(lead.id, { ...form, value: parseFloat(form.value) || 0, stage_id: parseInt(form.stage_id) })
+      const payload = {
+        ...form,
+        value: parseFloat(form.value) || 0,
+        stage_id: parseInt(form.stage_id),
+        contact_id: form.contact_id ? parseInt(form.contact_id) : null,
+      }
+      const res = await updateLead(lead.id, payload)
       onUpdated(res.data)
       onClose()
     } catch (err) {
@@ -100,6 +127,15 @@ function EditLeadModal({ lead, stages, onClose, onUpdated }) {
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Title *</label>
             <input className="input" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Contact</label>
+            <select className="input" value={form.contact_id} onChange={(e) => setForm({ ...form, contact_id: e.target.value })}>
+              <option value="">— No contact —</option>
+              {contacts.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}{c.company ? ` · ${c.company}` : ''}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Value (IDR)</label>
@@ -131,16 +167,18 @@ function EditLeadModal({ lead, stages, onClose, onUpdated }) {
 export default function Pipeline() {
   const [leads, setLeads] = useState([])
   const [stages, setStages] = useState([])
+  const [contacts, setContacts] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [activeStage, setActiveStage] = useState(null)
   const [editingLead, setEditingLead] = useState(null)
 
   useEffect(() => {
-    Promise.all([getLeads(), getStages()])
-      .then(([leadsRes, stagesRes]) => {
+    Promise.all([getLeads(), getStages(), getContacts()])
+      .then(([leadsRes, stagesRes, contactsRes]) => {
         setLeads(leadsRes.data)
         setStages(stagesRes.data)
+        setContacts(contactsRes.data)
       })
       .finally(() => setLoading(false))
   }, [])
@@ -279,6 +317,7 @@ export default function Pipeline() {
         <AddLeadModal
           stageId={activeStage}
           stages={stages}
+          contacts={contacts}
           onClose={() => setShowModal(false)}
           onCreated={handleCreated}
         />
@@ -288,6 +327,7 @@ export default function Pipeline() {
         <EditLeadModal
           lead={editingLead}
           stages={stages}
+          contacts={contacts}
           onClose={() => setEditingLead(null)}
           onUpdated={handleUpdated}
         />

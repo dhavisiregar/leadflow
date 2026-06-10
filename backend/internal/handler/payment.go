@@ -9,6 +9,7 @@ import (
 	"github.com/dhavi/leadflow/internal/model"
 	"github.com/labstack/echo/v4"
 	midtrans "github.com/midtrans/midtrans-go"
+	"github.com/midtrans/midtrans-go/coreapi"
 	"github.com/midtrans/midtrans-go/snap"
 	"gorm.io/gorm"
 )
@@ -101,6 +102,56 @@ func (h *PaymentHandler) Create(c echo.Context) error {
 		"client_key": h.ClientKey,
 		"order_id":   orderID,
 	})
+}
+
+// POST /api/v1/payment/verify  (protected — called by frontend after Snap onSuccess)
+func (h *PaymentHandler) Verify(c echo.Context) error {
+	tenantID := c.Get("tenant_id").(uint)
+
+	var body struct {
+		OrderID string `json:"order_id"`
+	}
+	if err := c.Bind(&body); err != nil || body.OrderID == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "order_id is required")
+	}
+
+	env := midtrans.Sandbox
+	if h.Production {
+		env = midtrans.Production
+	}
+
+	coreClient := coreapi.Client{}
+	coreClient.New(h.ServerKey, env)
+
+	result, err := coreClient.CheckTransaction(body.OrderID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "transaction not found")
+	}
+
+	if result.TransactionStatus != "settlement" && result.TransactionStatus != "capture" {
+		return echo.NewHTTPError(http.StatusPaymentRequired, "payment not completed")
+	}
+	if result.FraudStatus == "deny" {
+		return echo.NewHTTPError(http.StatusForbidden, "payment flagged as fraud")
+	}
+
+	// Verify this order belongs to the authenticated tenant
+	var orderTenantID uint
+	fmt.Sscanf(result.CustomField1, "%d", &orderTenantID)
+	if orderTenantID != tenantID {
+		return echo.NewHTTPError(http.StatusForbidden, "order does not belong to this tenant")
+	}
+
+	targetPlan := model.Plan(result.CustomField2)
+	if _, valid := planPrices[targetPlan]; !valid {
+		return echo.NewHTTPError(http.StatusBadRequest, "unknown plan in order")
+	}
+
+	if err := h.DB.Model(&model.Tenant{}).Where("id = ?", tenantID).Update("plan", targetPlan).Error; err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to update plan")
+	}
+
+	return c.JSON(http.StatusOK, echo.Map{"message": "plan updated", "plan": targetPlan})
 }
 
 // POST /api/v1/payment/webhook  (public — called by Midtrans)

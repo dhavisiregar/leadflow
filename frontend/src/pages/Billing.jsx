@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { getPlan, createPayment } from '../api'
-import { Check, Zap, Loader2 } from 'lucide-react'
+import { getPlan, createPayment, verifyPayment, downgradePlan } from '../api'
+import { Check, Zap, Loader2, AlertTriangle } from 'lucide-react'
 
 const PLANS = [
   {
@@ -52,12 +52,37 @@ export default function Billing() {
   const [plan, setPlan] = useState(null)
   const [loading, setLoading] = useState(true)
   const [paying, setPaying] = useState(null)
+  const [confirmDowngrade, setConfirmDowngrade] = useState(null)
+  const [downgrading, setDowngrading] = useState(false)
+  const [error, setError] = useState('')
 
   const fetchPlan = () => getPlan().then((res) => setPlan(res.data))
 
   useEffect(() => {
     fetchPlan().finally(() => setLoading(false))
   }, [])
+
+  const handleDowngrade = async () => {
+    if (!confirmDowngrade) return
+    setDowngrading(true)
+    setError('')
+    try {
+      await downgradePlan(confirmDowngrade)
+      await fetchPlan()
+      setConfirmDowngrade(null)
+    } catch (err) {
+      const msg = err.response?.data?.message
+      if (msg === 'leads exceed new plan limit') {
+        const d = err.response.data
+        setError(`Kamu punya ${d.leads} leads, melebihi batas ${d.plan_limit} leads di plan ini. Hapus beberapa leads dulu.`)
+      } else {
+        setError(msg || 'Gagal downgrade plan')
+      }
+      setConfirmDowngrade(null)
+    } finally {
+      setDowngrading(false)
+    }
+  }
 
   const handleUpgrade = async (planKey) => {
     setPaying(planKey)
@@ -68,8 +93,11 @@ export default function Billing() {
       await loadSnapScript(client_key, false)
 
       window.snap.pay(snap_token, {
-        onSuccess: () => {
-          fetchPlan()
+        onSuccess: async () => {
+          try {
+            await verifyPayment(res.data.order_id)
+          } catch {}
+          await fetchPlan()
           setPaying(null)
         },
         onPending: () => setPaying(null),
@@ -89,14 +117,14 @@ export default function Billing() {
   const usagePct = maxLeads > 0 ? Math.min((leadsCount / maxLeads) * 100, 100) : 0
 
   return (
-    <div className="p-8 max-w-5xl">
+    <div className="p-6 lg:p-8 w-full">
       <div className="mb-8">
         <h1 className="text-xl font-semibold text-gray-900">Billing & Plan</h1>
         <p className="text-sm text-gray-500 mt-0.5">Manage your subscription</p>
       </div>
 
       {/* Usage card */}
-      <div className="card p-5 mb-8 max-w-sm">
+      <div className="card p-5 mb-8 w-full max-w-xs">
         <div className="flex items-center justify-between mb-3">
           <p className="text-xs font-medium text-gray-700">Lead usage</p>
           <span className="text-xs font-semibold text-brand-600 capitalize">{currentPlan} plan</span>
@@ -115,8 +143,15 @@ export default function Billing() {
         )}
       </div>
 
+      {error && (
+        <div className="mb-6 flex items-start gap-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+          <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" />
+          {error}
+        </div>
+      )}
+
       {/* Plan cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {PLANS.map((p) => {
           const isCurrent = p.key === currentPlan
           const isUpgrade = PLANS.findIndex(x => x.key === p.key) > PLANS.findIndex(x => x.key === currentPlan)
@@ -160,12 +195,43 @@ export default function Billing() {
                   {isLoading ? 'Processing...' : 'Upgrade'}
                 </button>
               ) : (
-                <button className="btn-secondary text-xs w-full" disabled>Downgrade</button>
+                <button
+                  className="btn-secondary text-xs w-full"
+                  onClick={() => { setError(''); setConfirmDowngrade(p.key) }}
+                  disabled={!!paying || downgrading}
+                >
+                  Downgrade
+                </button>
               )}
             </div>
           )
         })}
       </div>
+
+      {/* Downgrade confirmation modal */}
+      {confirmDowngrade && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+          <div className="card w-full max-w-sm p-5">
+            <div className="flex items-center gap-3 mb-3">
+              <AlertTriangle size={18} className="text-yellow-500 flex-shrink-0" />
+              <h2 className="text-sm font-semibold text-gray-900">Downgrade to {PLANS.find(p => p.key === confirmDowngrade)?.name}?</h2>
+            </div>
+            <p className="text-xs text-gray-500 mb-5">
+              Fitur yang tidak tersedia di plan ini akan dinonaktifkan. Aksi ini berlaku segera.
+            </p>
+            <div className="flex gap-2">
+              <button className="btn-secondary flex-1 text-xs" onClick={() => setConfirmDowngrade(null)}>Batal</button>
+              <button
+                className="flex-1 text-xs bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                onClick={handleDowngrade}
+                disabled={downgrading}
+              >
+                {downgrading ? 'Processing...' : 'Ya, downgrade'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

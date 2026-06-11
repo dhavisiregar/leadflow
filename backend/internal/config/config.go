@@ -34,7 +34,7 @@ func Load() (*Config, error) {
 	expiresHours, _ := strconv.Atoi(getEnv("JWT_EXPIRES_HOURS", "72"))
 
 	cfg := &Config{
-		AppPort:         getEnv("APP_PORT", "8080"),
+		AppPort:         getEnv("APP_PORT", getEnv("PORT", "8080")),
 		AppEnv:          getEnv("APP_ENV", "development"),
 		DBHost:          getEnv("DB_HOST", "localhost"),
 		DBPort:          getEnv("DB_PORT", "5432"),

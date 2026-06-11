@@ -4,6 +4,7 @@ import {
   CheckSquare, Square, Plus, Trash2, X,
   Calendar, AlertCircle, Layers, Check, Kanban, Pencil,
 } from 'lucide-react'
+import ConfirmModal from '../components/ConfirmModal'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -78,7 +79,7 @@ function PriorityBadge({ priority }) {
   )
 }
 
-function TaskRow({ task, onComplete, onDelete, onUpdated, leads }) {
+function TaskRow({ task, onComplete, onDelete, onRequestDelete, onUpdated, leads }) {
   const [hovered, setHovered] = useState(false)
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState({
@@ -214,7 +215,7 @@ function TaskRow({ task, onComplete, onDelete, onUpdated, leads }) {
         <button onClick={openEdit} className="text-gray-400 dark:text-gray-500 hover:text-brand-500 transition-colors">
           <Pencil size={13} />
         </button>
-        <button onClick={() => onDelete(task.id)} className="text-gray-400 dark:text-gray-500 hover:text-red-400 transition-colors">
+        <button onClick={() => onRequestDelete(task.id)} className="text-gray-400 dark:text-gray-500 hover:text-red-400 transition-colors">
           <Trash2 size={13} />
         </button>
       </div>
@@ -417,6 +418,7 @@ export default function Tasks() {
   const [leads, setLeads] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
+  const [confirmId, setConfirmId] = useState(null)
   const [tab, setTab] = useState('all')
   const [groupByLead, setGroupByLead] = useState(false)
 
@@ -435,6 +437,7 @@ export default function Tasks() {
 
   const handleDelete = async (id) => {
     setTasks(prev => prev.filter(t => t.id !== id))
+    setConfirmId(null)
     try { await deleteTask(id) } catch {}
   }
 
@@ -585,7 +588,7 @@ export default function Tasks() {
               </div>
               <div className="space-y-1.5 pl-5">
                 {group.tasks.map(task => (
-                  <TaskRow key={task.id} task={task} leads={leads} onComplete={handleComplete} onDelete={handleDelete} onUpdated={handleUpdated} />
+                  <TaskRow key={task.id} task={task} leads={leads} onComplete={handleComplete} onRequestDelete={() => setConfirmId(task.id)} onUpdated={handleUpdated} />
                 ))}
                 {tab !== 'completed' && (
                   <QuickAddRow
@@ -602,7 +605,7 @@ export default function Tasks() {
         /* ── Flat view ── */
         <div className="space-y-1.5">
           {filtered.map(task => (
-            <TaskRow key={task.id} task={task} leads={leads} onComplete={handleComplete} onDelete={handleDelete} onUpdated={handleUpdated} />
+            <TaskRow key={task.id} task={task} leads={leads} onComplete={handleComplete} onRequestDelete={() => setConfirmId(task.id)} onUpdated={handleUpdated} />
           ))}
           {tab !== 'completed' && (
             <div className="pt-1">
@@ -614,6 +617,13 @@ export default function Tasks() {
 
       {showModal && (
         <AddTaskModal leads={leads} onClose={() => setShowModal(false)} onCreated={handleCreated} />
+      )}
+      {confirmId && (
+        <ConfirmModal
+          message="Task will be permanently deleted."
+          onConfirm={() => handleDelete(confirmId)}
+          onCancel={() => setConfirmId(null)}
+        />
       )}
     </div>
   )

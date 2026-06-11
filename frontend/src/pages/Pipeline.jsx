@@ -8,6 +8,7 @@ import {
   Plus, Trash2, DollarSign, X, Pencil, Clock,
   Phone, Mail, MessageSquare, FileText, User as UserIcon, Tag,
 } from 'lucide-react'
+import ConfirmModal from '../components/ConfirmModal'
 
 const CLOSE_REASONS = ['Price', 'Timeline', 'Competition', 'No Budget', 'Wrong Fit', 'Other']
 
@@ -469,6 +470,7 @@ export default function Pipeline() {
   const [editingLead, setEditingLead] = useState(null)
   const [pendingMove, setPendingMove] = useState(null)
   const [detailLeadId, setDetailLeadId] = useState(null)
+  const [confirmId, setConfirmId] = useState(null)
 
   useEffect(() => {
     Promise.all([getLeads(), getStages(), getContacts()])
@@ -507,6 +509,7 @@ export default function Pipeline() {
 
   const handleDelete = async (leadId) => {
     setLeads(prev => prev.filter(l => l.id !== leadId))
+    setConfirmId(null)
     try { await deleteLead(leadId) } catch {}
   }
 
@@ -587,7 +590,7 @@ export default function Pipeline() {
                                     <Pencil size={12} />
                                   </button>
                                   <button
-                                    onClick={e => { e.stopPropagation(); handleDelete(lead.id) }}
+                                    onClick={e => { e.stopPropagation(); setConfirmId(lead.id) }}
                                     className="text-gray-300 dark:text-gray-500 hover:text-red-400 transition-colors"
                                   >
                                     <Trash2 size={12} />
@@ -639,6 +642,13 @@ export default function Pipeline() {
           leadId={detailLeadId}
           onClose={() => setDetailLeadId(null)}
           onUpdated={handleUpdated}
+        />
+      )}
+      {confirmId && (
+        <ConfirmModal
+          message="Lead will be permanently deleted."
+          onConfirm={() => handleDelete(confirmId)}
+          onCancel={() => setConfirmId(null)}
         />
       )}
     </div>

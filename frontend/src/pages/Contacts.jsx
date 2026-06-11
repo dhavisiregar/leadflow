@@ -1,9 +1,15 @@
 import { useEffect, useState } from 'react'
-import { getContacts, createContact, deleteContact } from '../api'
-import { Plus, Trash2, Mail, Phone, Building2, X } from 'lucide-react'
+import { getContacts, createContact, updateContact, deleteContact } from '../api'
+import { Plus, Trash2, Mail, Phone, Building2, X, Pencil } from 'lucide-react'
+import ConfirmModal from '../components/ConfirmModal'
 
-function AddContactModal({ onClose, onCreated }) {
-  const [form, setForm] = useState({ name: '', email: '', phone: '', company: '' })
+function ContactModal({ contact, onClose, onSaved }) {
+  const isEdit = !!contact
+  const [form, setForm] = useState(
+    contact
+      ? { name: contact.name, email: contact.email || '', phone: contact.phone || '', company: contact.company || '' }
+      : { name: '', email: '', phone: '', company: '' }
+  )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -11,11 +17,13 @@ function AddContactModal({ onClose, onCreated }) {
     if (!form.name.trim()) return setError('Name is required')
     setLoading(true)
     try {
-      const res = await createContact(form)
-      onCreated(res.data)
+      const res = isEdit
+        ? await updateContact(contact.id, form)
+        : await createContact(form)
+      onSaved(res.data)
       onClose()
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create contact')
+      setError(err.response?.data?.message || 'Failed to save contact')
     } finally {
       setLoading(false)
     }
@@ -25,39 +33,48 @@ function AddContactModal({ onClose, onCreated }) {
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
       <div className="card w-full max-w-sm p-5">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-white">New Contact</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><X size={16} /></button>
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
+            {isEdit ? 'Edit Contact' : 'New Contact'}
+          </h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+            <X size={16} />
+          </button>
         </div>
 
-        {error && <div className="mb-3 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded px-3 py-2">{error}</div>}
+        {error && (
+          <div className="mb-3 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded px-3 py-2">
+            {error}
+          </div>
+        )}
 
         <div className="space-y-3">
           <div>
             <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Name *</label>
-            <input className="input" placeholder="Budi Santoso"
-              value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <input className="input" placeholder="Budi Santoso" autoFocus
+              value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
+              onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
             <input className="input" type="email" placeholder="budi@company.com"
-              value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+              value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
             <input className="input" placeholder="+62 812 3456 7890"
-              value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+              value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Company</label>
             <input className="input" placeholder="PT Maju Jaya"
-              value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} />
+              value={form.company} onChange={e => setForm({ ...form, company: e.target.value })} />
           </div>
         </div>
 
         <div className="flex gap-2 mt-5">
           <button className="btn-secondary flex-1" onClick={onClose}>Cancel</button>
           <button className="btn-primary flex-1" onClick={handleSubmit} disabled={loading}>
-            {loading ? 'Saving...' : 'Save contact'}
+            {loading ? 'Saving...' : isEdit ? 'Save changes' : 'Save contact'}
           </button>
         </div>
       </div>
@@ -68,22 +85,31 @@ function AddContactModal({ onClose, onCreated }) {
 export default function Contacts() {
   const [contacts, setContacts] = useState([])
   const [loading, setLoading] = useState(true)
-  const [showModal, setShowModal] = useState(false)
+  const [modal, setModal] = useState(null) // null | 'add' | contact object
+  const [confirmId, setConfirmId] = useState(null)
   const [search, setSearch] = useState('')
 
   useEffect(() => {
     getContacts()
-      .then((res) => setContacts(res.data))
+      .then(res => setContacts(res.data))
       .finally(() => setLoading(false))
   }, [])
 
   const handleDelete = async (id) => {
-    setContacts((prev) => prev.filter((c) => c.id !== id))
-    try { await deleteContact(id) } catch { /* silently fail */ }
+    setContacts(prev => prev.filter(c => c.id !== id))
+    setConfirmId(null)
+    try { await deleteContact(id) } catch {}
   }
 
-  const filtered = contacts.filter((c) =>
-    [c.name, c.email, c.company].some((v) => v?.toLowerCase().includes(search.toLowerCase()))
+  const handleSaved = (saved) => {
+    setContacts(prev => {
+      const exists = prev.find(c => c.id === saved.id)
+      return exists ? prev.map(c => c.id === saved.id ? saved : c) : [saved, ...prev]
+    })
+  }
+
+  const filtered = contacts.filter(c =>
+    [c.name, c.email, c.company, c.phone].some(v => v?.toLowerCase().includes(search.toLowerCase()))
   )
 
   return (
@@ -93,15 +119,16 @@ export default function Contacts() {
           <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Contacts</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{contacts.length} contacts in your workspace</p>
         </div>
-        <button className="btn-primary flex items-center gap-2" onClick={() => setShowModal(true)}>
-          <Plus size={14} /> <span className="hidden sm:inline">Add contact</span><span className="sm:hidden">Add</span>
+        <button className="btn-primary flex items-center gap-2" onClick={() => setModal('add')}>
+          <Plus size={14} />
+          <span className="hidden sm:inline">Add contact</span>
+          <span className="sm:hidden">Add</span>
         </button>
       </div>
 
-      {/* Search */}
       <div className="mb-4">
         <input className="input max-w-xs" placeholder="Search contacts..."
-          value={search} onChange={(e) => setSearch(e.target.value)} />
+          value={search} onChange={e => setSearch(e.target.value)} />
       </div>
 
       {loading ? (
@@ -114,8 +141,11 @@ export default function Contacts() {
         </div>
       ) : (
         <div className="card divide-y divide-gray-100 dark:divide-gray-700">
-          {filtered.map((contact) => (
-            <div key={contact.id} className="flex items-center justify-between px-4 sm:px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+          {filtered.map(contact => (
+            <div
+              key={contact.id}
+              className="group flex items-center justify-between px-4 sm:px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+            >
               <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                 <div className="w-9 h-9 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-brand-700 dark:text-brand-400 text-sm font-semibold flex-shrink-0">
                   {contact.name?.[0]?.toUpperCase()}
@@ -141,19 +171,39 @@ export default function Contacts() {
                   </div>
                 </div>
               </div>
-              <button onClick={() => handleDelete(contact.id)}
-                className="text-gray-300 dark:text-gray-600 hover:text-red-400 transition-colors flex-shrink-0 ml-2">
-                <Trash2 size={14} />
-              </button>
+
+              {/* Actions — visible on hover */}
+              <div className="flex items-center gap-1 flex-shrink-0 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={() => setModal(contact)}
+                  className="text-gray-400 dark:text-gray-500 hover:text-brand-500 transition-colors p-1"
+                >
+                  <Pencil size={13} />
+                </button>
+                <button
+                  onClick={() => setConfirmId(contact.id)}
+                  className="text-gray-400 dark:text-gray-500 hover:text-red-400 transition-colors p-1"
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
             </div>
           ))}
         </div>
       )}
 
-      {showModal && (
-        <AddContactModal
-          onClose={() => setShowModal(false)}
-          onCreated={(c) => setContacts((prev) => [c, ...prev])}
+      {modal && (
+        <ContactModal
+          contact={modal === 'add' ? null : modal}
+          onClose={() => setModal(null)}
+          onSaved={handleSaved}
+        />
+      )}
+      {confirmId && (
+        <ConfirmModal
+          message="Contact will be permanently deleted."
+          onConfirm={() => handleDelete(confirmId)}
+          onCancel={() => setConfirmId(null)}
         />
       )}
     </div>

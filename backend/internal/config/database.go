@@ -30,6 +30,7 @@ func NewDB(cfg *Config) (*gorm.DB, error) {
 		&model.Stage{},
 		&model.Lead{},
 		&model.Activity{},
+		&model.Task{},
 	); err != nil {
 		return nil, err
 	}

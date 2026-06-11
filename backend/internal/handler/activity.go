@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/dhavi/leadflow/internal/model"
 	"github.com/labstack/echo/v4"
@@ -56,5 +57,9 @@ func (h *ActivityHandler) Create(c echo.Context) error {
 	if err := h.DB.Create(&activity).Error; err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to create activity")
 	}
+
+	now := time.Now()
+	h.DB.Model(&model.Lead{}).Where("id = ?", leadID).Update("last_activity_at", now)
+
 	return c.JSON(http.StatusCreated, activity)
 }

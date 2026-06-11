@@ -21,6 +21,8 @@ type Config struct {
 	MidtransServerKey  string
 	MidtransClientKey  string
 	MidtransProduction bool
+	ResendAPIKey       string
+	AlertFromEmail     string
 }
 
 func Load() (*Config, error) {
@@ -42,6 +44,8 @@ func Load() (*Config, error) {
 		MidtransServerKey:  getEnv("MIDTRANS_SERVER_KEY", ""),
 		MidtransClientKey:  getEnv("MIDTRANS_CLIENT_KEY", ""),
 		MidtransProduction: getEnv("MIDTRANS_ENV", "sandbox") == "production",
+		ResendAPIKey:       getEnv("RESEND_API_KEY", ""),
+		AlertFromEmail:     getEnv("ALERT_FROM_EMAIL", "alerts@leadflow.dev"),
 	}
 
 	if cfg.JWTSecret == "" {

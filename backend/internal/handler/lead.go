@@ -114,7 +114,9 @@ func (h *LeadHandler) MoveStage(c echo.Context) error {
 	id, _ := strconv.Atoi(c.Param("id"))
 
 	var body struct {
-		StageID uint `json:"stage_id"`
+		StageID     uint   `json:"stage_id"`
+		CloseReason string `json:"close_reason"`
+		CloseNote   string `json:"close_note"`
 	}
 	if err := c.Bind(&body); err != nil || body.StageID == 0 {
 		return echo.NewHTTPError(http.StatusBadRequest, "stage_id is required")
@@ -126,9 +128,19 @@ func (h *LeadHandler) MoveStage(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid stage")
 	}
 
+	if (stage.Name == "Won" || stage.Name == "Lost") && body.CloseReason == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "close_reason is required for Won/Lost stages")
+	}
+
+	updates := map[string]interface{}{"stage_id": body.StageID}
+	if body.CloseReason != "" {
+		updates["close_reason"] = body.CloseReason
+		updates["close_note"] = body.CloseNote
+	}
+
 	result := h.DB.Model(&model.Lead{}).
 		Where("id = ? AND tenant_id = ?", id, tenantID).
-		Update("stage_id", body.StageID)
+		Updates(updates)
 
 	if result.RowsAffected == 0 {
 		return echo.NewHTTPError(http.StatusNotFound, "lead not found")

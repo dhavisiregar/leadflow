@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { ThemeProvider } from './context/ThemeContext'
 import Layout from './components/layout/Layout'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -7,6 +8,8 @@ import Dashboard from './pages/Dashboard'
 import Pipeline from './pages/Pipeline'
 import Contacts from './pages/Contacts'
 import Billing from './pages/Billing'
+import Tasks from './pages/Tasks'
+import Reports from './pages/Reports'
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -22,6 +25,7 @@ function PublicRoute({ children }) {
 
 export default function App() {
   return (
+    <ThemeProvider>
     <AuthProvider>
       <BrowserRouter>
         <Routes>
@@ -30,11 +34,14 @@ export default function App() {
           <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
             <Route index element={<Dashboard />} />
             <Route path="pipeline" element={<Pipeline />} />
+            <Route path="tasks" element={<Tasks />} />
             <Route path="contacts" element={<Contacts />} />
+            <Route path="reports" element={<Reports />} />
             <Route path="billing" element={<Billing />} />
           </Route>
         </Routes>
       </BrowserRouter>
     </AuthProvider>
+    </ThemeProvider>
   )
 }

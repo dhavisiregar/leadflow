@@ -20,7 +20,8 @@ export const getLead = (id) => api.get(`/leads/${id}`)
 export const createLead = (data) => api.post('/leads', data)
 export const updateLead = (id, data) => api.put(`/leads/${id}`, data)
 export const deleteLead = (id) => api.delete(`/leads/${id}`)
-export const moveLead = (id, stage_id) => api.patch(`/leads/${id}/stage`, { stage_id })
+export const moveLead = (id, stage_id, close_reason, close_note) =>
+  api.patch(`/leads/${id}/stage`, { stage_id, close_reason, close_note })
 
 // Contacts
 export const getContacts = () => api.get('/contacts')
@@ -34,3 +35,13 @@ export const createActivity = (leadId, data) => api.post(`/leads/${leadId}/activ
 
 // Dashboard
 export const getStats = () => api.get('/dashboard/stats')
+
+// Tasks
+export const getTasks = (params) => api.get('/tasks', { params })
+export const createTask = (data) => api.post('/tasks', data)
+export const updateTask = (id, data) => api.put(`/tasks/${id}`, data)
+export const completeTask = (id) => api.patch(`/tasks/${id}/complete`)
+export const deleteTask = (id) => api.delete(`/tasks/${id}`)
+
+// Reports
+export const getReportSummary = (days) => api.get('/reports/summary', { params: { days } })

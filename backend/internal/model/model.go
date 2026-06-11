@@ -78,20 +78,41 @@ type Stage struct {
 // ── Lead ──────────────────────────────────────────────────────────────────────
 
 type Lead struct {
-	ID        uint           `gorm:"primaryKey" json:"id"`
-	TenantID  uint           `gorm:"not null;index" json:"tenant_id"`
-	ContactID *uint          `json:"contact_id"`
-	Contact   *Contact       `gorm:"foreignKey:ContactID" json:"contact,omitempty"`
-	StageID   uint           `gorm:"not null" json:"stage_id"`
-	Stage     *Stage         `gorm:"foreignKey:StageID" json:"stage,omitempty"`
-	OwnerID   uint           `gorm:"not null" json:"owner_id"`
-	Owner     *User          `gorm:"foreignKey:OwnerID" json:"owner,omitempty"`
-	Title     string         `gorm:"not null" json:"title"`
-	Value     float64        `gorm:"default:0" json:"value"`
-	Notes     string         `json:"notes"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	ID             uint           `gorm:"primaryKey" json:"id"`
+	TenantID       uint           `gorm:"not null;index" json:"tenant_id"`
+	ContactID      *uint          `json:"contact_id"`
+	Contact        *Contact       `gorm:"foreignKey:ContactID" json:"contact,omitempty"`
+	StageID        uint           `gorm:"not null" json:"stage_id"`
+	Stage          *Stage         `gorm:"foreignKey:StageID" json:"stage,omitempty"`
+	OwnerID        uint           `gorm:"not null" json:"owner_id"`
+	Owner          *User          `gorm:"foreignKey:OwnerID" json:"owner,omitempty"`
+	Title          string         `gorm:"not null" json:"title"`
+	Value          float64        `gorm:"default:0" json:"value"`
+	Notes          string         `json:"notes"`
+	CloseReason    string         `json:"close_reason"`
+	CloseNote      string         `json:"close_note"`
+	LastActivityAt *time.Time     `json:"last_activity_at"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+	DeletedAt      gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
+// ── Task ──────────────────────────────────────────────────────────────────────
+
+type Task struct {
+	ID          uint           `gorm:"primaryKey" json:"id"`
+	TenantID    uint           `gorm:"not null;index" json:"tenant_id"`
+	LeadID      *uint          `json:"lead_id"`
+	Lead        *Lead          `gorm:"foreignKey:LeadID" json:"lead,omitempty"`
+	OwnerID     uint           `gorm:"not null" json:"owner_id"`
+	Owner       *User          `gorm:"foreignKey:OwnerID" json:"owner,omitempty"`
+	Title       string         `gorm:"not null" json:"title"`
+	Priority    string         `gorm:"default:'medium'" json:"priority"`
+	DueDate     *time.Time     `json:"due_date"`
+	IsCompleted bool           `gorm:"default:false" json:"is_completed"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 // ── Activity ──────────────────────────────────────────────────────────────────

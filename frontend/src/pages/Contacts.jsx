@@ -25,30 +25,30 @@ function AddContactModal({ onClose, onCreated }) {
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
       <div className="card w-full max-w-sm p-5">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold text-gray-900">New Contact</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-white">New Contact</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><X size={16} /></button>
         </div>
 
-        {error && <div className="mb-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</div>}
+        {error && <div className="mb-3 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded px-3 py-2">{error}</div>}
 
         <div className="space-y-3">
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Name *</label>
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Name *</label>
             <input className="input" placeholder="Budi Santoso"
               value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
             <input className="input" type="email" placeholder="budi@company.com"
               value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Phone</label>
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
             <input className="input" placeholder="+62 812 3456 7890"
               value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Company</label>
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Company</label>
             <input className="input" placeholder="PT Maju Jaya"
               value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} />
           </div>
@@ -87,14 +87,14 @@ export default function Contacts() {
   )
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">Contacts</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{contacts.length} contacts in your workspace</p>
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Contacts</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{contacts.length} contacts in your workspace</p>
         </div>
         <button className="btn-primary flex items-center gap-2" onClick={() => setShowModal(true)}>
-          <Plus size={14} /> Add contact
+          <Plus size={14} /> <span className="hidden sm:inline">Add contact</span><span className="sm:hidden">Add</span>
         </button>
       </div>
 
@@ -105,36 +105,36 @@ export default function Contacts() {
       </div>
 
       {loading ? (
-        <p className="text-sm text-gray-400">Loading contacts...</p>
+        <p className="text-sm text-gray-400 dark:text-gray-500">Loading contacts...</p>
       ) : filtered.length === 0 ? (
         <div className="card p-12 text-center">
-          <p className="text-gray-400 text-sm">
+          <p className="text-gray-400 dark:text-gray-500 text-sm">
             {search ? 'No contacts match your search.' : 'No contacts yet. Add your first one!'}
           </p>
         </div>
       ) : (
-        <div className="card divide-y divide-gray-100">
+        <div className="card divide-y divide-gray-100 dark:divide-gray-700">
           {filtered.map((contact) => (
-            <div key={contact.id} className="flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors">
-              <div className="flex items-center gap-4">
-                <div className="w-9 h-9 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 text-sm font-semibold">
+            <div key={contact.id} className="flex items-center justify-between px-4 sm:px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+              <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                <div className="w-9 h-9 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-brand-700 dark:text-brand-400 text-sm font-semibold flex-shrink-0">
                   {contact.name?.[0]?.toUpperCase()}
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{contact.name}</p>
-                  <div className="flex items-center gap-3 mt-0.5">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{contact.name}</p>
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-0.5">
                     {contact.company && (
-                      <span className="flex items-center gap-1 text-xs text-gray-400">
+                      <span className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
                         <Building2 size={10} />{contact.company}
                       </span>
                     )}
                     {contact.email && (
-                      <span className="flex items-center gap-1 text-xs text-gray-400">
+                      <span className="hidden sm:flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
                         <Mail size={10} />{contact.email}
                       </span>
                     )}
                     {contact.phone && (
-                      <span className="flex items-center gap-1 text-xs text-gray-400">
+                      <span className="hidden sm:flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
                         <Phone size={10} />{contact.phone}
                       </span>
                     )}
@@ -142,7 +142,7 @@ export default function Contacts() {
                 </div>
               </div>
               <button onClick={() => handleDelete(contact.id)}
-                className="text-gray-300 hover:text-red-400 transition-colors">
+                className="text-gray-300 dark:text-gray-600 hover:text-red-400 transition-colors flex-shrink-0 ml-2">
                 <Trash2 size={14} />
               </button>
             </div>

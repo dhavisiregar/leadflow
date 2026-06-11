@@ -9,9 +9,9 @@ function StatCard({ icon: Icon, label, value, sub, color }) {
     <div className="card p-5">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-xs font-medium text-gray-500 mb-1">{label}</p>
-          <p className="text-2xl font-semibold text-gray-900">{value}</p>
-          {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{label}</p>
+          <p className="text-2xl font-semibold text-gray-900 dark:text-white">{value}</p>
+          {sub && <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{sub}</p>}
         </div>
         <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${color}`}>
           <Icon size={16} />
@@ -36,17 +36,17 @@ export default function Dashboard() {
     new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val)
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-xl font-semibold text-gray-900">
+        <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
           Good day, {user?.name?.split(' ')[0]} 👋
         </h1>
-        <p className="text-sm text-gray-500 mt-0.5">Here's what's happening in your pipeline.</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Here's what's happening in your pipeline.</p>
       </div>
 
       {loading ? (
-        <div className="text-sm text-gray-400">Loading stats...</div>
+        <div className="text-sm text-gray-400 dark:text-gray-500">Loading stats...</div>
       ) : (
         <>
           {/* Stat cards */}
@@ -55,40 +55,40 @@ export default function Dashboard() {
               icon={Users}
               label="Total Leads"
               value={stats?.total_leads ?? 0}
-              color="bg-blue-50 text-blue-600"
+              color="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
             />
             <StatCard
               icon={DollarSign}
               label="Pipeline Value"
               value={formatCurrency(stats?.pipeline_value ?? 0)}
-              color="bg-green-50 text-green-600"
+              color="bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400"
             />
             <StatCard
               icon={TrendingUp}
               label="Won Leads"
               value={stats?.won_count ?? 0}
               sub={`${(stats?.conversion_rate ?? 0).toFixed(1)}% conversion`}
-              color="bg-purple-50 text-purple-600"
+              color="bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400"
             />
             <StatCard
               icon={Activity}
               label="Activities This Month"
               value={stats?.activities_this_month ?? 0}
-              color="bg-orange-50 text-orange-600"
+              color="bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400"
             />
           </div>
 
           {/* Pipeline breakdown */}
           <div className="card p-5">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-gray-900">Pipeline Breakdown</h2>
+              <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Pipeline Breakdown</h2>
               <Link to="/pipeline" className="flex items-center gap-1 text-xs text-brand-600 hover:text-brand-700 font-medium">
                 Open pipeline <ArrowRight size={12} />
               </Link>
             </div>
 
             {stats?.leads_by_stage?.length === 0 ? (
-              <p className="text-sm text-gray-400 py-4 text-center">
+              <p className="text-sm text-gray-400 dark:text-gray-500 py-4 text-center">
                 No leads yet.{' '}
                 <Link to="/pipeline" className="text-brand-600 hover:underline">Add your first lead →</Link>
               </p>
@@ -101,11 +101,11 @@ export default function Dashboard() {
                       <div className="flex items-center justify-between text-xs mb-1">
                         <div className="flex items-center gap-2">
                           <span className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
-                          <span className="font-medium text-gray-700">{s.stage_name}</span>
+                          <span className="font-medium text-gray-700 dark:text-gray-200">{s.stage_name}</span>
                         </div>
-                        <span className="text-gray-500">{s.count} leads · {formatCurrency(s.value)}</span>
+                        <span className="text-gray-500 dark:text-gray-400">{s.count} leads · {formatCurrency(s.value)}</span>
                       </div>
-                      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                         <div
                           className="h-full rounded-full transition-all"
                           style={{ width: `${pct}%`, backgroundColor: s.color }}

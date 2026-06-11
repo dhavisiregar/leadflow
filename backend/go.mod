@@ -1,6 +1,8 @@
 module github.com/dhavi/leadflow
 
-go 1.22
+go 1.23
+
+toolchain go1.23.3
 
 require (
 	github.com/golang-jwt/jwt/v5 v5.2.1
@@ -23,6 +25,7 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/midtrans/midtrans-go v1.3.8 // indirect
+	github.com/resend/resend-go/v2 v2.28.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	golang.org/x/net v0.24.0 // indirect

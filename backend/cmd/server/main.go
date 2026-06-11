@@ -6,6 +6,7 @@ import (
 
 	"github.com/dhavi/leadflow/internal/config"
 	"github.com/dhavi/leadflow/internal/handler"
+	"github.com/dhavi/leadflow/internal/job"
 	mw "github.com/dhavi/leadflow/internal/middleware"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -45,12 +46,22 @@ func main() {
 	dashH := &handler.DashboardHandler{DB: db}
 	stageH := &handler.StageHandler{DB: db}
 	planH := &handler.PlanHandler{DB: db}
+	taskH := &handler.TaskHandler{DB: db}
+	reportH := &handler.ReportHandler{DB: db}
 	paymentH := &handler.PaymentHandler{
 		DB:         db,
 		ServerKey:  cfg.MidtransServerKey,
 		ClientKey:  cfg.MidtransClientKey,
 		Production: cfg.MidtransProduction,
 	}
+
+	// ── Background jobs ───────────────────────────────────────────────────────
+	staleJob := &job.StaleLeadJob{
+		DB:           db,
+		ResendAPIKey: cfg.ResendAPIKey,
+		FromEmail:    cfg.AlertFromEmail,
+	}
+	staleJob.Start()
 
 	// ── Routes ────────────────────────────────────────────────────────────────
 	api := e.Group("/api/v1")
@@ -88,10 +99,27 @@ func main() {
 	protected.PUT("/contacts/:id", contactH.Update)
 	protected.DELETE("/contacts/:id", contactH.Delete)
 
+	protected.GET("/tasks", taskH.List)
+	protected.POST("/tasks", taskH.Create)
+	protected.PUT("/tasks/:id", taskH.Update)
+	protected.PATCH("/tasks/:id/complete", taskH.Complete)
+	protected.DELETE("/tasks/:id", taskH.Delete)
+
+	protected.GET("/reports/summary", reportH.Summary)
+
 	// Health check
 	e.GET("/health", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, echo.Map{"status": "ok"})
 	})
+
+	// Dev-only: trigger stale lead alert immediately (days=0 means all active leads)
+	if cfg.AppEnv == "development" {
+		e.POST("/dev/trigger-stale-alert", func(c echo.Context) error {
+			days := 0 // override: treat all active leads as stale
+			staleJob.RunNow(days)
+			return c.JSON(http.StatusOK, echo.Map{"message": "stale alert job triggered"})
+		})
+	}
 
 	// ── Start ─────────────────────────────────────────────────────────────────
 	log.Printf("LeadFlow API starting on :%s (env: %s)", cfg.AppPort, cfg.AppEnv)

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -23,6 +24,7 @@ type Config struct {
 	MidtransProduction bool
 	ResendAPIKey       string
 	AlertFromEmail     string
+	AllowedOrigins     []string
 }
 
 func Load() (*Config, error) {
@@ -46,6 +48,7 @@ func Load() (*Config, error) {
 		MidtransProduction: getEnv("MIDTRANS_ENV", "sandbox") == "production",
 		ResendAPIKey:       getEnv("RESEND_API_KEY", ""),
 		AlertFromEmail:     getEnv("ALERT_FROM_EMAIL", "alerts@leadflow.dev"),
+		AllowedOrigins:     strings.Split(getEnv("ALLOWED_ORIGINS", "http://localhost:5173"), ","),
 	}
 
 	if cfg.JWTSecret == "" {

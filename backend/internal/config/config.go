@@ -25,6 +25,7 @@ type Config struct {
 	ResendAPIKey       string
 	AlertFromEmail     string
 	AllowedOrigins     []string
+	DBSSLMode          string
 }
 
 func Load() (*Config, error) {
@@ -49,6 +50,7 @@ func Load() (*Config, error) {
 		ResendAPIKey:       getEnv("RESEND_API_KEY", ""),
 		AlertFromEmail:     getEnv("ALERT_FROM_EMAIL", "alerts@leadflow.dev"),
 		AllowedOrigins:     strings.Split(getEnv("ALLOWED_ORIGINS", "http://localhost:5173"), ","),
+		DBSSLMode:          getEnv("DB_SSLMODE", "disable"),
 	}
 
 	if cfg.JWTSecret == "" {
@@ -60,8 +62,8 @@ func Load() (*Config, error) {
 
 func (c *Config) DSN() string {
 	return fmt.Sprintf(
-		"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Asia/Jakarta",
-		c.DBHost, c.DBUser, c.DBPassword, c.DBName, c.DBPort,
+		"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s TimeZone=Asia/Jakarta",
+		c.DBHost, c.DBUser, c.DBPassword, c.DBName, c.DBPort, c.DBSSLMode,
 	)
 }
 

@@ -3,8 +3,12 @@ package model
 type PlanLimits struct {
 	MaxLeads          int  // -1 = unlimited
 	MaxUsers          int  // -1 = unlimited
+	MaxTasks          int  // -1 = unlimited
 	CSVExport         bool
 	EmailNotif        bool
+	Tasks             bool
+	Reports           bool
+	LeadDetailPage    bool
 	APIAccess         bool
 	Analytics         bool
 	WinLossAnalytics  bool
@@ -20,20 +24,32 @@ type PlanLimits struct {
 
 var Limits = map[Plan]PlanLimits{
 	PlanFree: {
-		MaxLeads: 10,
-		MaxUsers: 1,
+		MaxLeads:       10,
+		MaxUsers:       1,
+		MaxTasks:       0,
+		Tasks:          false,
+		Reports:        false,
+		LeadDetailPage: false,
 	},
 	PlanStarter: {
-		MaxLeads:   500,
-		MaxUsers:   3,
-		CSVExport:  true,
-		EmailNotif: true,
+		MaxLeads:       500,
+		MaxUsers:       3,
+		MaxTasks:       50,
+		CSVExport:      true,
+		EmailNotif:     true,
+		Tasks:          true,
+		Reports:        false,
+		LeadDetailPage: true,
 	},
 	PlanPro: {
 		MaxLeads:         -1,
 		MaxUsers:         10,
+		MaxTasks:         -1,
 		CSVExport:        true,
 		EmailNotif:       true,
+		Tasks:            true,
+		Reports:          true,
+		LeadDetailPage:   true,
 		APIAccess:        true,
 		Analytics:        true,
 		WinLossAnalytics: true,
@@ -43,8 +59,12 @@ var Limits = map[Plan]PlanLimits{
 	PlanTeam: {
 		MaxLeads:          -1,
 		MaxUsers:          -1,
+		MaxTasks:          -1,
 		CSVExport:         true,
 		EmailNotif:        true,
+		Tasks:             true,
+		Reports:           true,
+		LeadDetailPage:    true,
 		APIAccess:         true,
 		Analytics:         true,
 		WinLossAnalytics:  true,

@@ -40,6 +40,18 @@ func (h *LeadHandler) Get(c echo.Context) error {
 	tenantID := c.Get("tenant_id").(uint)
 	id, _ := strconv.Atoi(c.Param("id"))
 
+	var tenant model.Tenant
+	if err := h.DB.First(&tenant, tenantID).Error; err != nil {
+		return echo.NewHTTPError(http.StatusNotFound, "tenant not found")
+	}
+
+	if !model.Limits[tenant.Plan].LeadDetailPage {
+		return echo.NewHTTPError(http.StatusForbidden, map[string]interface{}{
+			"message": "lead detail page is not available on your plan",
+			"plan":    tenant.Plan,
+		})
+	}
+
 	var lead model.Lead
 	if err := h.DB.Where("id = ? AND tenant_id = ?", id, tenantID).
 		Preload("Contact").Preload("Stage").Preload("Owner").

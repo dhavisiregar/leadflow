@@ -18,6 +18,18 @@ type ReportHandler struct {
 func (h *ReportHandler) Summary(c echo.Context) error {
 	tenantID := c.Get("tenant_id").(uint)
 
+	var tenant model.Tenant
+	if err := h.DB.First(&tenant, tenantID).Error; err != nil {
+		return echo.NewHTTPError(http.StatusNotFound, "tenant not found")
+	}
+
+	if !model.Limits[tenant.Plan].Reports {
+		return echo.NewHTTPError(http.StatusForbidden, map[string]interface{}{
+			"message": "reports feature is not available on your plan",
+			"plan":    tenant.Plan,
+		})
+	}
+
 	days := 90
 	if d := c.QueryParam("days"); d != "" {
 		if parsed, err := strconv.Atoi(d); err == nil && parsed > 0 {

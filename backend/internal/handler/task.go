@@ -23,6 +23,18 @@ type TaskGroup struct {
 func (h *TaskHandler) List(c echo.Context) error {
 	tenantID := c.Get("tenant_id").(uint)
 
+	var tenant model.Tenant
+	if err := h.DB.First(&tenant, tenantID).Error; err != nil {
+		return echo.NewHTTPError(http.StatusNotFound, "tenant not found")
+	}
+
+	if !model.Limits[tenant.Plan].Tasks {
+		return echo.NewHTTPError(http.StatusForbidden, map[string]interface{}{
+			"message": "tasks feature is not available on your plan",
+			"plan":    tenant.Plan,
+		})
+	}
+
 	query := h.DB.Where("tasks.tenant_id = ?", tenantID).
 		Preload("Lead.Stage").
 		Preload("Owner").
@@ -95,6 +107,18 @@ func (h *TaskHandler) Create(c echo.Context) error {
 	tenantID := c.Get("tenant_id").(uint)
 	ownerID := c.Get("user_id").(uint)
 
+	var tenant model.Tenant
+	if err := h.DB.First(&tenant, tenantID).Error; err != nil {
+		return echo.NewHTTPError(http.StatusNotFound, "tenant not found")
+	}
+
+	if !model.Limits[tenant.Plan].Tasks {
+		return echo.NewHTTPError(http.StatusForbidden, map[string]interface{}{
+			"message": "tasks feature is not available on your plan",
+			"plan":    tenant.Plan,
+		})
+	}
+
 	var task model.Task
 	if err := c.Bind(&task); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
@@ -116,6 +140,19 @@ func (h *TaskHandler) Create(c echo.Context) error {
 // PATCH /api/v1/tasks/:id/complete
 func (h *TaskHandler) Complete(c echo.Context) error {
 	tenantID := c.Get("tenant_id").(uint)
+
+	var tenant model.Tenant
+	if err := h.DB.First(&tenant, tenantID).Error; err != nil {
+		return echo.NewHTTPError(http.StatusNotFound, "tenant not found")
+	}
+
+	if !model.Limits[tenant.Plan].Tasks {
+		return echo.NewHTTPError(http.StatusForbidden, map[string]interface{}{
+			"message": "tasks feature is not available on your plan",
+			"plan":    tenant.Plan,
+		})
+	}
+
 	id, _ := strconv.Atoi(c.Param("id"))
 
 	var task model.Task
@@ -132,6 +169,19 @@ func (h *TaskHandler) Complete(c echo.Context) error {
 // PUT /api/v1/tasks/:id
 func (h *TaskHandler) Update(c echo.Context) error {
 	tenantID := c.Get("tenant_id").(uint)
+
+	var tenant model.Tenant
+	if err := h.DB.First(&tenant, tenantID).Error; err != nil {
+		return echo.NewHTTPError(http.StatusNotFound, "tenant not found")
+	}
+
+	if !model.Limits[tenant.Plan].Tasks {
+		return echo.NewHTTPError(http.StatusForbidden, map[string]interface{}{
+			"message": "tasks feature is not available on your plan",
+			"plan":    tenant.Plan,
+		})
+	}
+
 	id, _ := strconv.Atoi(c.Param("id"))
 
 	var task model.Task
@@ -175,6 +225,19 @@ func (h *TaskHandler) Update(c echo.Context) error {
 // DELETE /api/v1/tasks/:id
 func (h *TaskHandler) Delete(c echo.Context) error {
 	tenantID := c.Get("tenant_id").(uint)
+
+	var tenant model.Tenant
+	if err := h.DB.First(&tenant, tenantID).Error; err != nil {
+		return echo.NewHTTPError(http.StatusNotFound, "tenant not found")
+	}
+
+	if !model.Limits[tenant.Plan].Tasks {
+		return echo.NewHTTPError(http.StatusForbidden, map[string]interface{}{
+			"message": "tasks feature is not available on your plan",
+			"plan":    tenant.Plan,
+		})
+	}
+
 	id, _ := strconv.Atoi(c.Param("id"))
 
 	result := h.DB.Where("id = ? AND tenant_id = ?", id, tenantID).Delete(&model.Task{})

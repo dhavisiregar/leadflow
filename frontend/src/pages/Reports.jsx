@@ -101,7 +101,7 @@ export default function Reports() {
                 Reports
               </h1>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                Analitik pipeline kamu
+                Your pipeline analytics
               </p>
             </div>
             <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">

@@ -92,6 +92,8 @@ func main() {
 
 	protected.GET("/leads/:id/activities", activityH.List)
 	protected.POST("/leads/:id/activities", activityH.Create)
+	protected.PUT("/leads/:id/activities/:activity_id", activityH.Update)
+	protected.DELETE("/leads/:id/activities/:activity_id", activityH.Delete)
 
 	protected.GET("/contacts", contactH.List)
 	protected.POST("/contacts", contactH.Create)

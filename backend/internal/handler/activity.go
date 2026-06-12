@@ -63,3 +63,61 @@ func (h *ActivityHandler) Create(c echo.Context) error {
 
 	return c.JSON(http.StatusCreated, activity)
 }
+
+// PUT /api/v1/leads/:id/activities/:activity_id
+func (h *ActivityHandler) Update(c echo.Context) error {
+	userID := c.Get("user_id").(uint)
+	leadID, _ := strconv.Atoi(c.Param("id"))
+	activityID, _ := strconv.Atoi(c.Param("activity_id"))
+
+	var activity model.Activity
+	if err := h.DB.Where("id = ? AND lead_id = ?", activityID, leadID).First(&activity).Error; err != nil {
+		return echo.NewHTTPError(http.StatusNotFound, "activity not found")
+	}
+
+	// Only creator can edit
+	if activity.CreatedByID != userID {
+		return echo.NewHTTPError(http.StatusForbidden, "cannot edit other users' activities")
+	}
+
+	var update model.Activity
+	if err := c.Bind(&update); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
+	}
+
+	if update.Type != "" {
+		activity.Type = update.Type
+	}
+	if update.Note != "" {
+		activity.Note = update.Note
+	}
+
+	if err := h.DB.Save(&activity).Error; err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to update activity")
+	}
+
+	return c.JSON(http.StatusOK, activity)
+}
+
+// DELETE /api/v1/leads/:id/activities/:activity_id
+func (h *ActivityHandler) Delete(c echo.Context) error {
+	userID := c.Get("user_id").(uint)
+	leadID, _ := strconv.Atoi(c.Param("id"))
+	activityID, _ := strconv.Atoi(c.Param("activity_id"))
+
+	var activity model.Activity
+	if err := h.DB.Where("id = ? AND lead_id = ?", activityID, leadID).First(&activity).Error; err != nil {
+		return echo.NewHTTPError(http.StatusNotFound, "activity not found")
+	}
+
+	// Only creator can delete
+	if activity.CreatedByID != userID {
+		return echo.NewHTTPError(http.StatusForbidden, "cannot delete other users' activities")
+	}
+
+	if err := h.DB.Delete(&activity).Error; err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to delete activity")
+	}
+
+	return c.NoContent(http.StatusNoContent)
+}

@@ -8,6 +8,8 @@ import {
   getLead,
   getActivities,
   createActivity,
+  updateActivity,
+  deleteActivity,
   moveLead,
   createLead,
   updateLead,
@@ -423,6 +425,7 @@ function LeadDetailPanel({ leadId, onClose, onUpdated }) {
   const [actType, setActType] = useState("call");
   const [actNote, setActNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [editingActivity, setEditingActivity] = useState(null);
   const [featureError, setFeatureError] = useState(null);
 
   useEffect(() => {
@@ -476,6 +479,30 @@ function LeadDetailPanel({ leadId, onClose, onUpdated }) {
       setActNote("");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleUpdateActivity = async (activityId) => {
+    if (!editingActivity.note.trim()) return;
+    setSubmitting(true);
+    try {
+      const res = await updateActivity(leadId, activityId, {
+        type: editingActivity.type,
+        note: editingActivity.note,
+      });
+      setActivities((prev) => prev.map((a) => (a.id === activityId ? res.data : a)));
+      setEditingActivity(null);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteActivity = async (activityId) => {
+    if (confirm("Delete this activity?")) {
+      try {
+        await deleteActivity(leadId, activityId);
+        setActivities((prev) => prev.filter((a) => a.id !== activityId));
+      } catch {}
     }
   };
 
@@ -702,29 +729,97 @@ function LeadDetailPanel({ leadId, onClose, onUpdated }) {
                   <div className="space-y-4">
                     {activities.map((act) => {
                       const Icon = ACT_ICONS[act.type] || FileText;
+                      const isEditing = editingActivity?.id === act.id;
                       return (
-                        <div key={act.id} className="flex gap-3">
+                        <div
+                          key={act.id}
+                          className={`group flex gap-3 ${isEditing ? "bg-gray-50 dark:bg-gray-700/50 p-3 rounded" : ""}`}
+                        >
                           <div
                             className={`flex-shrink-0 mt-0.5 ${ACT_COLORS[act.type] || "text-gray-400 dark:text-gray-500"}`}
                           >
                             <Icon size={13} />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs text-gray-800 dark:text-gray-200 leading-snug">
-                              {act.note}
-                            </p>
-                            <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 capitalize">
-                              {act.type} · {act.created_by?.name} ·{" "}
-                              {new Date(act.created_at).toLocaleDateString(
-                                "id-ID",
-                                {
-                                  day: "2-digit",
-                                  month: "short",
-                                  year: "numeric",
-                                },
-                              )}
-                            </p>
+                            {isEditing ? (
+                              <div className="space-y-2">
+                                <select
+                                  className="input text-xs"
+                                  value={editingActivity.type}
+                                  onChange={(e) =>
+                                    setEditingActivity({
+                                      ...editingActivity,
+                                      type: e.target.value,
+                                    })
+                                  }
+                                >
+                                  <option value="call">Call</option>
+                                  <option value="email">Email</option>
+                                  <option value="meeting">Meeting</option>
+                                  <option value="note">Note</option>
+                                </select>
+                                <textarea
+                                  className="input text-xs"
+                                  placeholder="Activity note..."
+                                  rows="2"
+                                  value={editingActivity.note}
+                                  onChange={(e) =>
+                                    setEditingActivity({
+                                      ...editingActivity,
+                                      note: e.target.value,
+                                    })
+                                  }
+                                />
+                                <div className="flex gap-1">
+                                  <button
+                                    className="btn-secondary text-xs flex-1"
+                                    onClick={() => setEditingActivity(null)}
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    className="btn-primary text-xs flex-1"
+                                    onClick={() => handleUpdateActivity(act.id)}
+                                  >
+                                    Save
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <p className="text-xs text-gray-800 dark:text-gray-200 leading-snug">
+                                  {act.note}
+                                </p>
+                                <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 capitalize">
+                                  {act.type} · {act.created_by?.name} ·{" "}
+                                  {new Date(act.created_at).toLocaleDateString(
+                                    "id-ID",
+                                    {
+                                      day: "2-digit",
+                                      month: "short",
+                                      year: "numeric",
+                                    },
+                                  )}
+                                </p>
+                              </>
+                            )}
                           </div>
+                          {!isEditing && (
+                            <div className="flex gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={() => setEditingActivity(act)}
+                                className="text-gray-400 dark:text-gray-500 hover:text-brand-500 transition-colors p-0.5"
+                              >
+                                <Pencil size={12} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteActivity(act.id)}
+                                className="text-gray-400 dark:text-gray-500 hover:text-red-400 transition-colors p-0.5"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          )}
                         </div>
                       );
                     })}

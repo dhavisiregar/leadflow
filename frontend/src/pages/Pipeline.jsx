@@ -945,7 +945,7 @@ export default function Pipeline() {
       </div>
 
       <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="flex gap-4 overflow-x-auto pb-4 px-5 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-gray-100 dark:[&::-webkit-scrollbar-track]:bg-gray-800 [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full">
+        <div className="flex gap-4 overflow-x-auto pb-4 px-5 scrollbar-visible">
           {stages.map((stage) => {
             const stageLeads = leadsByStage(stage.id);
             const stageValue = stageLeads.reduce(

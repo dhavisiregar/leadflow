@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -37,5 +37,21 @@
   .card {
     @apply bg-white rounded-xl border border-gray-200 shadow-sm
            dark:bg-gray-800 dark:border-gray-700;
+  }
+  .scrollbar-visible {
+    scrollbar-width: auto;
+  }
+  .scrollbar-visible::-webkit-scrollbar {
+    display: block;
+    height: 8px;
+  }
+  .scrollbar-visible::-webkit-scrollbar-track {
+    @apply bg-gray-100 dark:bg-gray-800;
+  }
+  .scrollbar-visible::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 dark:bg-gray-600 rounded-full;
+  }
+  .scrollbar-visible::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400 dark:bg-gray-500;
   }
 }

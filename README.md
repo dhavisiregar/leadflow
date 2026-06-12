@@ -2,8 +2,6 @@
 
 A full-stack CRM application for managing leads, contacts, tasks, and sales pipelines with real-time collaboration features.
 
-![LeadFlow](https://leadflowww.vercel.app)
-
 ## Features
 
 ### Pipeline Management

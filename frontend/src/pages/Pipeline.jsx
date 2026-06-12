@@ -426,6 +426,7 @@ function LeadDetailPanel({ leadId, onClose, onUpdated }) {
   const [actNote, setActNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [editingActivity, setEditingActivity] = useState(null);
+  const [confirmDeleteActivityId, setConfirmDeleteActivityId] = useState(null);
   const [featureError, setFeatureError] = useState(null);
 
   useEffect(() => {
@@ -498,11 +499,15 @@ function LeadDetailPanel({ leadId, onClose, onUpdated }) {
   };
 
   const handleDeleteActivity = async (activityId) => {
-    if (confirm("Delete this activity?")) {
-      try {
-        await deleteActivity(leadId, activityId);
-        setActivities((prev) => prev.filter((a) => a.id !== activityId));
-      } catch {}
+    setConfirmDeleteActivityId(activityId);
+  };
+
+  const confirmDeleteActivity = async () => {
+    try {
+      await deleteActivity(leadId, confirmDeleteActivityId);
+      setActivities((prev) => prev.filter((a) => a.id !== confirmDeleteActivityId));
+    } finally {
+      setConfirmDeleteActivityId(null);
     }
   };
 
@@ -828,6 +833,13 @@ function LeadDetailPanel({ leadId, onClose, onUpdated }) {
               </div>
             </div>
           </div>
+        )}
+        {confirmDeleteActivityId && (
+          <ConfirmModal
+            message="Activity will be permanently deleted."
+            onConfirm={confirmDeleteActivity}
+            onCancel={() => setConfirmDeleteActivityId(null)}
+          />
         )}
       </div>
     </div>

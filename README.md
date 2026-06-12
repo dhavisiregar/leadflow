@@ -216,15 +216,3 @@ leadflow/
 1. Create PostgreSQL database on Neon
 2. Use connection string for `DB_*` env vars
 3. Set `DB_SSLMODE=require` for SSL connections
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-MIT
-
-## Author
-
-[Sultan Muhammad Dhavi](https://github.com/dhavisiregar)

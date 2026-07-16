@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
-import { login } from '../api'
+import { login, googleLogin } from '../api'
 import { Zap, Sun, Moon } from 'lucide-react'
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
 export default function Login() {
   const { signIn } = useAuth()
@@ -12,6 +14,7 @@ export default function Login() {
   const [form, setForm] = useState({ email: '', password: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const googleBtnRef = useRef(null)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -27,6 +30,58 @@ export default function Login() {
       setLoading(false)
     }
   }
+
+  const handleGoogleCredential = async (response) => {
+    setError('')
+    setLoading(true)
+    try {
+      const res = await googleLogin(response.credential)
+      signIn(res.data.token, res.data.user)
+      navigate('/')
+    } catch (err) {
+      setError(err.response?.data?.message || 'Google sign-in failed')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID) return
+
+    let cancelled = false
+    let poll
+
+    const renderButton = () => {
+      if (cancelled || !googleBtnRef.current || !window.google?.accounts?.id) return
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleGoogleCredential,
+      })
+      googleBtnRef.current.innerHTML = ''
+      window.google.accounts.id.renderButton(googleBtnRef.current, {
+        theme: dark ? 'filled_black' : 'outline',
+        size: 'large',
+        width: 328,
+        text: 'continue_with',
+      })
+    }
+
+    if (window.google?.accounts?.id) {
+      renderButton()
+    } else {
+      poll = setInterval(() => {
+        if (window.google?.accounts?.id) {
+          clearInterval(poll)
+          renderButton()
+        }
+      }, 100)
+    }
+
+    return () => {
+      cancelled = true
+      clearInterval(poll)
+    }
+  }, [dark])
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4">
@@ -53,6 +108,23 @@ export default function Login() {
             <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-600 dark:text-red-400">
               {error}
             </div>
+          )}
+
+          {GOOGLE_CLIENT_ID ? (
+            <>
+              <div ref={googleBtnRef} className="flex justify-center mb-4" />
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+                <span className="text-xs text-gray-400 dark:text-gray-500">or</span>
+                <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+              </div>
+            </>
+          ) : (
+            import.meta.env.DEV && (
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">
+                Set VITE_GOOGLE_CLIENT_ID to enable "Continue with Google".
+              </p>
+            )
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">

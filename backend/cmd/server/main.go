@@ -39,7 +39,7 @@ func main() {
 	}))
 
 	// ── Handlers ──────────────────────────────────────────────────────────────
-	authH := &handler.AuthHandler{DB: db, JWTSecret: cfg.JWTSecret, JWTExpiresHrs: cfg.JWTExpiresHours}
+	authH := &handler.AuthHandler{DB: db, JWTSecret: cfg.JWTSecret, JWTExpiresHrs: cfg.JWTExpiresHours, GoogleClientID: cfg.GoogleClientID}
 	leadH := &handler.LeadHandler{DB: db}
 	contactH := &handler.ContactHandler{DB: db}
 	activityH := &handler.ActivityHandler{DB: db}
@@ -69,6 +69,7 @@ func main() {
 	// Public routes
 	api.POST("/auth/register", authH.Register)
 	api.POST("/auth/login", authH.Login)
+	api.POST("/auth/google", authH.GoogleLogin)
 
 	// Protected routes
 	protected := api.Group("", mw.JWT(cfg.JWTSecret))

@@ -1,8 +1,11 @@
 package handler
 
 import (
+	"crypto/rand"
+	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/dhavi/leadflow/internal/middleware"
 	"github.com/dhavi/leadflow/internal/model"
@@ -12,9 +15,44 @@ import (
 )
 
 type AuthHandler struct {
-	DB            *gorm.DB
-	JWTSecret     string
-	JWTExpiresHrs int
+	DB             *gorm.DB
+	JWTSecret      string
+	JWTExpiresHrs  int
+	GoogleClientID string
+}
+
+// seedTenantAndOwner creates a tenant, its owner user, and the default
+// pipeline stages within an existing transaction. Shared by Register and
+// GoogleLogin, which both need to bootstrap a brand-new account.
+func seedTenantAndOwner(tx *gorm.DB, tenantName, slug, userName, email, hashedPassword string) (model.User, error) {
+	tenant := model.Tenant{Name: tenantName, Slug: slug, Plan: model.PlanFree}
+	if err := tx.Create(&tenant).Error; err != nil {
+		return model.User{}, echo.NewHTTPError(http.StatusInternalServerError, "failed to create tenant")
+	}
+
+	user := model.User{
+		TenantID: tenant.ID,
+		Name:     userName,
+		Email:    email,
+		Password: hashedPassword,
+		Role:     model.RoleOwner,
+	}
+	if err := tx.Create(&user).Error; err != nil {
+		return model.User{}, echo.NewHTTPError(http.StatusInternalServerError, "failed to create user")
+	}
+
+	stages := []model.Stage{
+		{TenantID: tenant.ID, Name: "New Lead", Order: 1, Color: "#718096"},
+		{TenantID: tenant.ID, Name: "Contacted", Order: 2, Color: "#3182CE"},
+		{TenantID: tenant.ID, Name: "Negotiation", Order: 3, Color: "#D69E2E"},
+		{TenantID: tenant.ID, Name: "Won", Order: 4, Color: "#38A169"},
+		{TenantID: tenant.ID, Name: "Lost", Order: 5, Color: "#E53E3E"},
+	}
+	if err := tx.Create(&stages).Error; err != nil {
+		return model.User{}, echo.NewHTTPError(http.StatusInternalServerError, "failed to seed stages")
+	}
+
+	return user, nil
 }
 
 // ── Register ──────────────────────────────────────────────────────────────────
@@ -50,36 +88,11 @@ func (h *AuthHandler) Register(c echo.Context) error {
 			return echo.NewHTTPError(http.StatusConflict, "email already registered")
 		}
 
-		// Create tenant
-		tenant := model.Tenant{Name: req.TenantName, Slug: slug, Plan: model.PlanFree}
-		if err := tx.Create(&tenant).Error; err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "failed to create tenant")
+		created, err := seedTenantAndOwner(tx, req.TenantName, slug, req.Name, req.Email, string(hashed))
+		if err != nil {
+			return err
 		}
-
-		// Create owner user
-		user = model.User{
-			TenantID: tenant.ID,
-			Name:     req.Name,
-			Email:    req.Email,
-			Password: string(hashed),
-			Role:     model.RoleOwner,
-		}
-		if err := tx.Create(&user).Error; err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "failed to create user")
-		}
-
-		// Seed default pipeline stages
-		stages := []model.Stage{
-			{TenantID: tenant.ID, Name: "New Lead", Order: 1, Color: "#718096"},
-			{TenantID: tenant.ID, Name: "Contacted", Order: 2, Color: "#3182CE"},
-			{TenantID: tenant.ID, Name: "Negotiation", Order: 3, Color: "#D69E2E"},
-			{TenantID: tenant.ID, Name: "Won", Order: 4, Color: "#38A169"},
-			{TenantID: tenant.ID, Name: "Lost", Order: 5, Color: "#E53E3E"},
-		}
-		if err := tx.Create(&stages).Error; err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "failed to seed stages")
-		}
-
+		user = created
 		return nil
 	})
 	if err != nil {
@@ -124,6 +137,77 @@ func (h *AuthHandler) Login(c echo.Context) error {
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
 		return echo.NewHTTPError(http.StatusUnauthorized, "invalid email or password")
+	}
+
+	token, err := middleware.GenerateToken(&user, h.JWTSecret, h.JWTExpiresHrs)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to generate token")
+	}
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"token": token,
+		"user": echo.Map{
+			"id":        user.ID,
+			"name":      user.Name,
+			"email":     user.Email,
+			"role":      user.Role,
+			"tenant_id": user.TenantID,
+		},
+	})
+}
+
+// ── Google ────────────────────────────────────────────────────────────────────
+
+type GoogleLoginRequest struct {
+	Credential string `json:"credential" validate:"required"`
+}
+
+// POST /api/v1/auth/google
+// Verifies a Google Identity Services ID token. If the email is already
+// registered, logs that user in; otherwise bootstraps a new tenant + owner
+// account for them, same as Register.
+func (h *AuthHandler) GoogleLogin(c echo.Context) error {
+	var req GoogleLoginRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
+	}
+
+	claims, err := verifyGoogleIDToken(req.Credential, h.GoogleClientID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "invalid google token")
+	}
+
+	var user model.User
+	if err := h.DB.Where("email = ?", claims.Email).First(&user).Error; err != nil {
+		name := claims.Name
+		if name == "" {
+			name = claims.Email
+		}
+
+		// Google users don't set a password; store an unusable random hash.
+		randomBytes := make([]byte, 32)
+		if _, rErr := rand.Read(randomBytes); rErr != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "failed to create account")
+		}
+		hashed, hErr := bcrypt.GenerateFromPassword(randomBytes, bcrypt.DefaultCost)
+		if hErr != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "failed to create account")
+		}
+
+		slugBase := strings.ToLower(strings.ReplaceAll(name, " ", "-"))
+		slug := fmt.Sprintf("%s-%d", slugBase, time.Now().UnixNano())
+
+		txErr := h.DB.Transaction(func(tx *gorm.DB) error {
+			created, err := seedTenantAndOwner(tx, name+"'s Team", slug, name, claims.Email, string(hashed))
+			if err != nil {
+				return err
+			}
+			user = created
+			return nil
+		})
+		if txErr != nil {
+			return txErr
+		}
 	}
 
 	token, err := middleware.GenerateToken(&user, h.JWTSecret, h.JWTExpiresHrs)

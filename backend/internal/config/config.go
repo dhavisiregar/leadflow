@@ -26,6 +26,7 @@ type Config struct {
 	AlertFromEmail     string
 	AllowedOrigins     []string
 	DBSSLMode          string
+	GoogleClientID     string
 }
 
 func Load() (*Config, error) {
@@ -51,6 +52,7 @@ func Load() (*Config, error) {
 		AlertFromEmail:     getEnv("ALERT_FROM_EMAIL", "alerts@leadflow.dev"),
 		AllowedOrigins:     strings.Split(getEnv("ALLOWED_ORIGINS", "http://localhost:5173"), ","),
 		DBSSLMode:          getEnv("DB_SSLMODE", "disable"),
+		GoogleClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
 	}
 
 	if cfg.JWTSecret == "" {

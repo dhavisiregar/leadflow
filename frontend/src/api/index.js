@@ -24,6 +24,8 @@ export const updateLead = (id, data) => api.put(`/leads/${id}`, data);
 export const deleteLead = (id) => api.delete(`/leads/${id}`);
 export const moveLead = (id, stage_id, close_reason, close_note) =>
   api.patch(`/leads/${id}/stage`, { stage_id, close_reason, close_note });
+export const assignLead = (id, owner_id) =>
+  api.patch(`/leads/${id}/assign`, { owner_id });
 
 // Contacts
 export const getContacts = () => api.get("/contacts");
@@ -53,3 +55,13 @@ export const deleteTask = (id) => api.delete(`/tasks/${id}`);
 // Reports
 export const getReportSummary = (days) =>
   api.get("/reports/summary", { params: { days } });
+
+// Team
+export const getTeamMembers = () => api.get("/team/members");
+export const inviteMember = (data) => api.post("/team/invite", data);
+export const updateMemberRole = (id, role) =>
+  api.patch(`/team/members/${id}/role`, { role });
+export const removeMember = (id) => api.delete(`/team/members/${id}`);
+export const getInviteInfo = (token) => api.get(`/auth/invite/${token}`);
+export const acceptInvite = (token, password) =>
+  api.post("/auth/accept-invite", { token, password });

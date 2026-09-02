@@ -48,6 +48,12 @@ func main() {
 	planH := &handler.PlanHandler{DB: db}
 	taskH := &handler.TaskHandler{DB: db}
 	reportH := &handler.ReportHandler{DB: db}
+	teamH := &handler.TeamHandler{
+		DB:           db,
+		ResendAPIKey: cfg.ResendAPIKey,
+		FromEmail:    cfg.AlertFromEmail,
+		FrontendURL:  cfg.FrontendURL,
+	}
 	paymentH := &handler.PaymentHandler{
 		DB:         db,
 		ServerKey:  cfg.MidtransServerKey,
@@ -70,6 +76,8 @@ func main() {
 	api.POST("/auth/register", authH.Register)
 	api.POST("/auth/login", authH.Login)
 	api.POST("/auth/google", authH.GoogleLogin)
+	api.GET("/auth/invite/:token", authH.GetInviteInfo)
+	api.POST("/auth/accept-invite", authH.AcceptInvite)
 
 	// Protected routes
 	protected := api.Group("", mw.JWT(cfg.JWTSecret))
@@ -90,6 +98,7 @@ func main() {
 	protected.PUT("/leads/:id", leadH.Update)
 	protected.DELETE("/leads/:id", leadH.Delete)
 	protected.PATCH("/leads/:id/stage", leadH.MoveStage)
+	protected.PATCH("/leads/:id/assign", leadH.Assign)
 
 	protected.GET("/leads/:id/activities", activityH.List)
 	protected.POST("/leads/:id/activities", activityH.Create)
@@ -109,6 +118,11 @@ func main() {
 	protected.DELETE("/tasks/:id", taskH.Delete)
 
 	protected.GET("/reports/summary", reportH.Summary)
+
+	protected.GET("/team/members", teamH.List)
+	protected.POST("/team/invite", teamH.Invite, mw.RequireOwner)
+	protected.PATCH("/team/members/:id/role", teamH.UpdateRole, mw.RequireOwner)
+	protected.DELETE("/team/members/:id", teamH.Remove, mw.RequireOwner)
 
 	// Health check
 	e.GET("/health", func(c echo.Context) error {

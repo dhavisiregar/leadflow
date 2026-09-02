@@ -27,6 +27,7 @@ type Config struct {
 	AllowedOrigins     []string
 	DBSSLMode          string
 	GoogleClientID     string
+	FrontendURL        string
 }
 
 func Load() (*Config, error) {
@@ -36,13 +37,13 @@ func Load() (*Config, error) {
 	expiresHours, _ := strconv.Atoi(getEnv("JWT_EXPIRES_HOURS", "72"))
 
 	cfg := &Config{
-		AppPort:         getEnv("APP_PORT", getEnv("PORT", "8080")),
-		AppEnv:          getEnv("APP_ENV", "development"),
-		DBHost:          getEnv("DB_HOST", "localhost"),
-		DBPort:          getEnv("DB_PORT", "5432"),
-		DBUser:          getEnv("DB_USER", "postgres"),
-		DBPassword:      getEnv("DB_PASSWORD", ""),
-		DBName:          getEnv("DB_NAME", "leadflow"),
+		AppPort:            getEnv("APP_PORT", getEnv("PORT", "8080")),
+		AppEnv:             getEnv("APP_ENV", "development"),
+		DBHost:             getEnv("DB_HOST", "localhost"),
+		DBPort:             getEnv("DB_PORT", "5432"),
+		DBUser:             getEnv("DB_USER", "postgres"),
+		DBPassword:         getEnv("DB_PASSWORD", ""),
+		DBName:             getEnv("DB_NAME", "leadflow"),
 		JWTSecret:          getEnv("JWT_SECRET", ""),
 		JWTExpiresHours:    expiresHours,
 		MidtransServerKey:  getEnv("MIDTRANS_SERVER_KEY", ""),
@@ -53,6 +54,7 @@ func Load() (*Config, error) {
 		AllowedOrigins:     strings.Split(getEnv("ALLOWED_ORIGINS", "http://localhost:5173"), ","),
 		DBSSLMode:          getEnv("DB_SSLMODE", "disable"),
 		GoogleClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
+		FrontendURL:        getEnv("FRONTEND_URL", "http://localhost:5173"),
 	}
 
 	if cfg.JWTSecret == "" {

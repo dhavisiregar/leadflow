@@ -4,12 +4,14 @@ import { ThemeProvider } from './context/ThemeContext'
 import Layout from './components/layout/Layout'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import AcceptInvite from './pages/AcceptInvite'
 import Dashboard from './pages/Dashboard'
 import Pipeline from './pages/Pipeline'
 import Contacts from './pages/Contacts'
 import Billing from './pages/Billing'
 import Tasks from './pages/Tasks'
 import Reports from './pages/Reports'
+import Team from './pages/Team'
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -31,6 +33,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
           <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+          <Route path="/accept-invite" element={<PublicRoute><AcceptInvite /></PublicRoute>} />
           <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
             <Route index element={<Dashboard />} />
             <Route path="pipeline" element={<Pipeline />} />
@@ -38,6 +41,7 @@ export default function App() {
             <Route path="contacts" element={<Contacts />} />
             <Route path="reports" element={<Reports />} />
             <Route path="billing" element={<Billing />} />
+            <Route path="team" element={<Team />} />
           </Route>
         </Routes>
       </BrowserRouter>

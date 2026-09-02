@@ -14,6 +14,8 @@ import {
   createLead,
   updateLead,
   deleteLead,
+  assignLead,
+  getTeamMembers,
 } from "../api";
 import {
   Plus,
@@ -280,13 +282,14 @@ function AddLeadModal({ stageId, stages, contacts, onClose, onCreated }) {
   );
 }
 
-function EditLeadModal({ lead, stages, contacts, onClose, onUpdated }) {
+function EditLeadModal({ lead, stages, contacts, members, onClose, onUpdated }) {
   const [form, setForm] = useState({
     title: lead.title,
     value: lead.value || "",
     notes: lead.notes || "",
     stage_id: lead.stage_id,
     contact_id: lead.contact_id || "",
+    owner_id: lead.owner_id || "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -295,13 +298,19 @@ function EditLeadModal({ lead, stages, contacts, onClose, onUpdated }) {
     if (!form.title.trim()) return setError("Title is required");
     setLoading(true);
     try {
+      const { owner_id, ...rest } = form;
       const res = await updateLead(lead.id, {
-        ...form,
+        ...rest,
         value: parseFloat(form.value) || 0,
         stage_id: parseInt(form.stage_id),
         contact_id: form.contact_id ? parseInt(form.contact_id) : null,
       });
-      onUpdated(res.data);
+      let updated = res.data;
+      if (owner_id && parseInt(owner_id) !== lead.owner_id) {
+        const assignRes = await assignLead(lead.id, parseInt(owner_id));
+        updated = { ...updated, owner_id: assignRes.data.owner_id };
+      }
+      onUpdated(updated);
       onClose();
     } catch (err) {
       setError(err.response?.data?.message || "Failed to update lead");
@@ -358,6 +367,24 @@ function EditLeadModal({ lead, stages, contacts, onClose, onUpdated }) {
               ))}
             </select>
           </div>
+          {members && members.length > 0 && (
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Assigned to
+              </label>
+              <select
+                className="input"
+                value={form.owner_id}
+                onChange={(e) => setForm({ ...form, owner_id: e.target.value })}
+              >
+                {members.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div>
             <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
               Value (IDR)
@@ -850,6 +877,7 @@ export default function Pipeline() {
   const [leads, setLeads] = useState([]);
   const [stages, setStages] = useState([]);
   const [contacts, setContacts] = useState([]);
+  const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [activeStage, setActiveStage] = useState(null);
@@ -859,11 +887,12 @@ export default function Pipeline() {
   const [confirmId, setConfirmId] = useState(null);
 
   useEffect(() => {
-    Promise.all([getLeads(), getStages(), getContacts()])
-      .then(([leadsRes, stagesRes, contactsRes]) => {
+    Promise.all([getLeads(), getStages(), getContacts(), getTeamMembers()])
+      .then(([leadsRes, stagesRes, contactsRes, membersRes]) => {
         setLeads(leadsRes.data);
         setStages(stagesRes.data);
         setContacts(contactsRes.data);
+        setMembers(membersRes.data.filter((m) => m.status !== "pending"));
       })
       .finally(() => setLoading(false));
   }, []);
@@ -1082,6 +1111,7 @@ export default function Pipeline() {
           lead={editingLead}
           stages={stages}
           contacts={contacts}
+          members={members}
           onClose={() => setEditingLead(null)}
           onUpdated={handleUpdated}
         />

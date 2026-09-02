@@ -58,10 +58,10 @@ func seedTenantAndOwner(tx *gorm.DB, tenantName, slug, userName, email, hashedPa
 // ── Register ──────────────────────────────────────────────────────────────────
 
 type RegisterRequest struct {
-	Name         string `json:"name" validate:"required"`
-	Email        string `json:"email" validate:"required,email"`
-	Password     string `json:"password" validate:"required,min=8"`
-	TenantName   string `json:"tenant_name" validate:"required"`
+	Name       string `json:"name" validate:"required"`
+	Email      string `json:"email" validate:"required,email"`
+	Password   string `json:"password" validate:"required,min=8"`
+	TenantName string `json:"tenant_name" validate:"required"`
 }
 
 // POST /api/v1/auth/register
@@ -208,6 +208,85 @@ func (h *AuthHandler) GoogleLogin(c echo.Context) error {
 		if txErr != nil {
 			return txErr
 		}
+	}
+
+	token, err := middleware.GenerateToken(&user, h.JWTSecret, h.JWTExpiresHrs)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to generate token")
+	}
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"token": token,
+		"user": echo.Map{
+			"id":        user.ID,
+			"name":      user.Name,
+			"email":     user.Email,
+			"role":      user.Role,
+			"tenant_id": user.TenantID,
+		},
+	})
+}
+
+// ── Accept invite ─────────────────────────────────────────────────────────────
+
+// GET /api/v1/auth/invite/:token  (public)
+// Returns the invitee's name/email/tenant so the accept-invite page can greet
+// them before they set a password.
+func (h *AuthHandler) GetInviteInfo(c echo.Context) error {
+	token := c.Param("token")
+
+	var user model.User
+	if err := h.DB.Preload("Tenant").
+		Where("invite_token = ? AND status = ?", token, "pending").
+		First(&user).Error; err != nil {
+		return echo.NewHTTPError(http.StatusNotFound, "invite not found")
+	}
+	if user.InviteExpiresAt == nil || time.Now().After(*user.InviteExpiresAt) {
+		return echo.NewHTTPError(http.StatusGone, "this invite has expired")
+	}
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"name":        user.Name,
+		"email":       user.Email,
+		"tenant_name": user.Tenant.Name,
+	})
+}
+
+type AcceptInviteRequest struct {
+	Token    string `json:"token" validate:"required"`
+	Password string `json:"password" validate:"required,min=8"`
+}
+
+// POST /api/v1/auth/accept-invite  (public)
+// Sets the invitee's password and activates their account, then logs them in.
+func (h *AuthHandler) AcceptInvite(c echo.Context) error {
+	var req AcceptInviteRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
+	}
+	if len(req.Password) < 8 {
+		return echo.NewHTTPError(http.StatusBadRequest, "password must be at least 8 characters")
+	}
+
+	var user model.User
+	if err := h.DB.Where("invite_token = ? AND status = ?", req.Token, "pending").First(&user).Error; err != nil {
+		return echo.NewHTTPError(http.StatusNotFound, "invite not found")
+	}
+	if user.InviteExpiresAt == nil || time.Now().After(*user.InviteExpiresAt) {
+		return echo.NewHTTPError(http.StatusGone, "this invite has expired")
+	}
+
+	hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to set password")
+	}
+
+	user.Password = string(hashed)
+	user.Status = "active"
+	user.InviteToken = nil
+	user.InviteExpiresAt = nil
+	if err := h.DB.Save(&user).Error; err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to accept invite")
 	}
 
 	token, err := middleware.GenerateToken(&user, h.JWTSecret, h.JWTExpiresHrs)

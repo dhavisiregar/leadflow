@@ -38,16 +38,19 @@ const (
 )
 
 type User struct {
-	ID        uint           `gorm:"primaryKey" json:"id"`
-	TenantID  uint           `gorm:"not null;index" json:"tenant_id"`
-	Tenant    Tenant         `gorm:"foreignKey:TenantID" json:"-"`
-	Name      string         `gorm:"not null" json:"name"`
-	Email     string         `gorm:"uniqueIndex;not null" json:"email"`
-	Password  string         `gorm:"not null" json:"-"`
-	Role      Role           `gorm:"default:'member'" json:"role"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	ID              uint           `gorm:"primaryKey" json:"id"`
+	TenantID        uint           `gorm:"not null;index" json:"tenant_id"`
+	Tenant          Tenant         `gorm:"foreignKey:TenantID" json:"-"`
+	Name            string         `gorm:"not null" json:"name"`
+	Email           string         `gorm:"uniqueIndex;not null" json:"email"`
+	Password        string         `gorm:"not null" json:"-"`
+	Role            Role           `gorm:"default:'member'" json:"role"`
+	Status          string         `gorm:"default:'active'" json:"status"` // "active" | "pending"
+	InviteToken     *string        `gorm:"uniqueIndex" json:"-"`
+	InviteExpiresAt *time.Time     `json:"-"`
+	CreatedAt       time.Time      `json:"created_at"`
+	UpdatedAt       time.Time      `json:"updated_at"`
+	DeletedAt       gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 // ── Contact ───────────────────────────────────────────────────────────────────

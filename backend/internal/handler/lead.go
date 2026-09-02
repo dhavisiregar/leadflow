@@ -106,18 +106,50 @@ func (h *LeadHandler) Update(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusNotFound, "lead not found")
 	}
 
+	originalOwnerID := lead.OwnerID
+
 	if err := c.Bind(&lead); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
 	}
 
-	// Protect immutable fields
+	// Protect immutable fields — ownership can only change via the dedicated
+	// /assign endpoint, which validates the new owner belongs to the tenant.
 	lead.ID = uint(id)
 	lead.TenantID = tenantID
+	lead.OwnerID = originalOwnerID
 
 	if err := h.DB.Save(&lead).Error; err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to update lead")
 	}
 	return c.JSON(http.StatusOK, lead)
+}
+
+// PATCH /api/v1/leads/:id/assign
+func (h *LeadHandler) Assign(c echo.Context) error {
+	tenantID := c.Get("tenant_id").(uint)
+	id, _ := strconv.Atoi(c.Param("id"))
+
+	var body struct {
+		OwnerID uint `json:"owner_id"`
+	}
+	if err := c.Bind(&body); err != nil || body.OwnerID == 0 {
+		return echo.NewHTTPError(http.StatusBadRequest, "owner_id is required")
+	}
+
+	// New owner must belong to the same tenant.
+	var owner model.User
+	if err := h.DB.Where("id = ? AND tenant_id = ?", body.OwnerID, tenantID).First(&owner).Error; err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid owner")
+	}
+
+	result := h.DB.Model(&model.Lead{}).
+		Where("id = ? AND tenant_id = ?", id, tenantID).
+		Update("owner_id", body.OwnerID)
+
+	if result.RowsAffected == 0 {
+		return echo.NewHTTPError(http.StatusNotFound, "lead not found")
+	}
+	return c.JSON(http.StatusOK, echo.Map{"message": "lead reassigned", "owner_id": body.OwnerID})
 }
 
 // PATCH /api/v1/leads/:id/stage

@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
 import {
   LayoutDashboard, Kanban, Users, LogOut, Zap, CreditCard,
-  CheckSquare, BarChart2, Menu, X, Sun, Moon,
+  CheckSquare, BarChart2, Menu, X, Sun, Moon, UserPlus,
 } from 'lucide-react'
 import { getPlan } from '../../api'
 
@@ -14,6 +14,7 @@ const nav = [
   { to: '/tasks', icon: CheckSquare, label: 'Tasks' },
   { to: '/contacts', icon: Users, label: 'Contacts' },
   { to: '/reports', icon: BarChart2, label: 'Reports' },
+  { to: '/team', icon: UserPlus, label: 'Team' },
   { to: '/billing', icon: CreditCard, label: 'Billing' },
 ]
 

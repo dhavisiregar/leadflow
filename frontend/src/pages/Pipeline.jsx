@@ -16,7 +16,11 @@ import {
   deleteLead,
   assignLead,
   getTeamMembers,
+  exportLeads,
+  importLeads,
 } from "../api";
+import { downloadBlob, readBlobErrorMessage } from "../utils/download";
+import CsvImportModal from "../components/CsvImportModal";
 import {
   Plus,
   Trash2,
@@ -30,6 +34,8 @@ import {
   FileText,
   User as UserIcon,
   Tag,
+  Download,
+  Upload,
 } from "lucide-react";
 import ConfirmModal from "../components/ConfirmModal";
 import UpgradePrompt from "../components/UpgradePrompt";
@@ -885,6 +891,8 @@ export default function Pipeline() {
   const [pendingMove, setPendingMove] = useState(null);
   const [detailLeadId, setDetailLeadId] = useState(null);
   const [confirmId, setConfirmId] = useState(null);
+  const [showImport, setShowImport] = useState(false);
+  const [csvError, setCsvError] = useState("");
 
   useEffect(() => {
     Promise.all([getLeads(), getStages(), getContacts(), getTeamMembers()])
@@ -896,6 +904,18 @@ export default function Pipeline() {
       })
       .finally(() => setLoading(false));
   }, []);
+
+  const refetchLeads = () => getLeads().then((res) => setLeads(res.data));
+
+  const handleExport = async () => {
+    setCsvError("");
+    try {
+      const res = await exportLeads();
+      downloadBlob(res.data, "leads.csv");
+    } catch (err) {
+      setCsvError(await readBlobErrorMessage(err, "Failed to export leads"));
+    }
+  };
 
   const leadsByStage = (stageId) => leads.filter((l) => l.stage_id === stageId);
 
@@ -961,17 +981,33 @@ export default function Pipeline() {
             {leads.length} leads · drag to move between stages
           </p>
         </div>
-        <button
-          className="btn-primary flex items-center gap-2"
-          onClick={() => {
-            setActiveStage(stages[0]?.id);
-            setShowModal(true);
-          }}
-        >
-          <Plus size={14} /> <span className="hidden sm:inline">Add lead</span>
-          <span className="sm:hidden">Add</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button className="btn-secondary flex items-center gap-2" onClick={handleExport}>
+            <Download size={14} />
+            <span className="hidden sm:inline">Export</span>
+          </button>
+          <button className="btn-secondary flex items-center gap-2" onClick={() => setShowImport(true)}>
+            <Upload size={14} />
+            <span className="hidden sm:inline">Import</span>
+          </button>
+          <button
+            className="btn-primary flex items-center gap-2"
+            onClick={() => {
+              setActiveStage(stages[0]?.id);
+              setShowModal(true);
+            }}
+          >
+            <Plus size={14} /> <span className="hidden sm:inline">Add lead</span>
+            <span className="sm:hidden">Add</span>
+          </button>
+        </div>
       </div>
+
+      {csvError && (
+        <div className="mb-4 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">
+          {csvError}
+        </div>
+      )}
 
       <DragDropContext onDragEnd={handleDragEnd}>
         <div className="flex gap-4 overflow-x-auto pb-4 px-5 scrollbar-visible">
@@ -1104,6 +1140,17 @@ export default function Pipeline() {
           contacts={contacts}
           onClose={() => setShowModal(false)}
           onCreated={handleCreated}
+        />
+      )}
+      {showImport && (
+        <CsvImportModal
+          title="Import leads"
+          templateHeaders={["title", "value", "stage", "contact_email", "notes"]}
+          templateExampleRow={["New website inquiry", "5000000", stages[0]?.name || "New Lead", "", ""]}
+          templateFilename="leads-template.csv"
+          onImport={importLeads}
+          onClose={() => setShowImport(false)}
+          onImported={refetchLeads}
         />
       )}
       {editingLead && (

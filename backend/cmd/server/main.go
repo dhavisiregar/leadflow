@@ -99,6 +99,8 @@ func main() {
 	protected.DELETE("/leads/:id", leadH.Delete)
 	protected.PATCH("/leads/:id/stage", leadH.MoveStage)
 	protected.PATCH("/leads/:id/assign", leadH.Assign)
+	protected.GET("/leads/export", leadH.Export)
+	protected.POST("/leads/import", leadH.Import)
 
 	protected.GET("/leads/:id/activities", activityH.List)
 	protected.POST("/leads/:id/activities", activityH.Create)
@@ -110,6 +112,8 @@ func main() {
 	protected.GET("/contacts/:id", contactH.Get)
 	protected.PUT("/contacts/:id", contactH.Update)
 	protected.DELETE("/contacts/:id", contactH.Delete)
+	protected.GET("/contacts/export", contactH.Export)
+	protected.POST("/contacts/import", contactH.Import)
 
 	protected.GET("/tasks", taskH.List)
 	protected.POST("/tasks", taskH.Create)

@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
-import { getContacts, createContact, updateContact, deleteContact } from '../api'
-import { Plus, Trash2, Mail, Phone, Building2, X, Pencil } from 'lucide-react'
+import { getContacts, createContact, updateContact, deleteContact, exportContacts, importContacts } from '../api'
+import { Plus, Trash2, Mail, Phone, Building2, X, Pencil, Download, Upload } from 'lucide-react'
 import ConfirmModal from '../components/ConfirmModal'
+import CsvImportModal from '../components/CsvImportModal'
+import { downloadBlob, readBlobErrorMessage } from '../utils/download'
 
 function ContactModal({ contact, onClose, onSaved }) {
   const isEdit = !!contact
@@ -88,12 +90,26 @@ export default function Contacts() {
   const [modal, setModal] = useState(null) // null | 'add' | contact object
   const [confirmId, setConfirmId] = useState(null)
   const [search, setSearch] = useState('')
+  const [showImport, setShowImport] = useState(false)
+  const [csvError, setCsvError] = useState('')
 
   useEffect(() => {
     getContacts()
       .then(res => setContacts(res.data))
       .finally(() => setLoading(false))
   }, [])
+
+  const refetch = () => getContacts().then(res => setContacts(res.data))
+
+  const handleExport = async () => {
+    setCsvError('')
+    try {
+      const res = await exportContacts()
+      downloadBlob(res.data, 'contacts.csv')
+    } catch (err) {
+      setCsvError(await readBlobErrorMessage(err, 'Failed to export contacts'))
+    }
+  }
 
   const handleDelete = async (id) => {
     setContacts(prev => prev.filter(c => c.id !== id))
@@ -119,12 +135,28 @@ export default function Contacts() {
           <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Contacts</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{contacts.length} contacts in your workspace</p>
         </div>
-        <button className="btn-primary flex items-center gap-2" onClick={() => setModal('add')}>
-          <Plus size={14} />
-          <span className="hidden sm:inline">Add contact</span>
-          <span className="sm:hidden">Add</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button className="btn-secondary flex items-center gap-2" onClick={handleExport}>
+            <Download size={14} />
+            <span className="hidden sm:inline">Export</span>
+          </button>
+          <button className="btn-secondary flex items-center gap-2" onClick={() => setShowImport(true)}>
+            <Upload size={14} />
+            <span className="hidden sm:inline">Import</span>
+          </button>
+          <button className="btn-primary flex items-center gap-2" onClick={() => setModal('add')}>
+            <Plus size={14} />
+            <span className="hidden sm:inline">Add contact</span>
+            <span className="sm:hidden">Add</span>
+          </button>
+        </div>
       </div>
+
+      {csvError && (
+        <div className="mb-4 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">
+          {csvError}
+        </div>
+      )}
 
       <div className="mb-4">
         <input className="input max-w-xs" placeholder="Search contacts..."
@@ -204,6 +236,17 @@ export default function Contacts() {
           message="Contact will be permanently deleted."
           onConfirm={() => handleDelete(confirmId)}
           onCancel={() => setConfirmId(null)}
+        />
+      )}
+      {showImport && (
+        <CsvImportModal
+          title="Import contacts"
+          templateHeaders={['name', 'email', 'phone', 'company', 'notes']}
+          templateExampleRow={['Budi Santoso', 'budi@company.com', '+62 812 3456 7890', 'PT Maju Jaya', '']}
+          templateFilename="contacts-template.csv"
+          onImport={importContacts}
+          onClose={() => setShowImport(false)}
+          onImported={refetch}
         />
       )}
     </div>

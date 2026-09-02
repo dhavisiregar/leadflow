@@ -57,9 +57,9 @@ type User struct {
 
 type Contact struct {
 	ID        uint           `gorm:"primaryKey" json:"id"`
-	TenantID  uint           `gorm:"not null;index" json:"tenant_id"`
-	Name      string         `gorm:"not null" json:"name"`
-	Email     string         `json:"email"`
+	TenantID  uint           `gorm:"not null;index;index:idx_contacts_tenant_name,priority:1;index:idx_contacts_tenant_email,priority:1" json:"tenant_id"`
+	Name      string         `gorm:"not null;index:idx_contacts_tenant_name,priority:2" json:"name"`
+	Email     string         `gorm:"index:idx_contacts_tenant_email,priority:2" json:"email"`
 	Phone     string         `json:"phone"`
 	Company   string         `json:"company"`
 	Notes     string         `json:"notes"`
@@ -82,14 +82,14 @@ type Stage struct {
 
 type Lead struct {
 	ID             uint           `gorm:"primaryKey" json:"id"`
-	TenantID       uint           `gorm:"not null;index" json:"tenant_id"`
+	TenantID       uint           `gorm:"not null;index;index:idx_leads_tenant_title,priority:1" json:"tenant_id"`
 	ContactID      *uint          `json:"contact_id"`
 	Contact        *Contact       `gorm:"foreignKey:ContactID" json:"contact,omitempty"`
 	StageID        uint           `gorm:"not null" json:"stage_id"`
 	Stage          *Stage         `gorm:"foreignKey:StageID" json:"stage,omitempty"`
 	OwnerID        uint           `gorm:"not null" json:"owner_id"`
 	Owner          *User          `gorm:"foreignKey:OwnerID" json:"owner,omitempty"`
-	Title          string         `gorm:"not null" json:"title"`
+	Title          string         `gorm:"not null;index:idx_leads_tenant_title,priority:2" json:"title"`
 	Value          float64        `gorm:"default:0" json:"value"`
 	Notes          string         `json:"notes"`
 	CloseReason    string         `json:"close_reason"`
@@ -104,12 +104,12 @@ type Lead struct {
 
 type Task struct {
 	ID          uint           `gorm:"primaryKey" json:"id"`
-	TenantID    uint           `gorm:"not null;index" json:"tenant_id"`
+	TenantID    uint           `gorm:"not null;index;index:idx_tasks_tenant_title,priority:1" json:"tenant_id"`
 	LeadID      *uint          `json:"lead_id"`
 	Lead        *Lead          `gorm:"foreignKey:LeadID" json:"lead,omitempty"`
 	OwnerID     uint           `gorm:"not null" json:"owner_id"`
 	Owner       *User          `gorm:"foreignKey:OwnerID" json:"owner,omitempty"`
-	Title       string         `gorm:"not null" json:"title"`
+	Title       string         `gorm:"not null;index:idx_tasks_tenant_title,priority:2" json:"title"`
 	Priority    string         `gorm:"default:'medium'" json:"priority"`
 	DueDate     *time.Time     `json:"due_date"`
 	IsCompleted bool           `gorm:"default:false" json:"is_completed"`

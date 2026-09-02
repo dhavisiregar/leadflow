@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import {
   getLeads,
@@ -893,6 +893,17 @@ export default function Pipeline() {
   const [confirmId, setConfirmId] = useState(null);
   const [showImport, setShowImport] = useState(false);
   const [csvError, setCsvError] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Opened from the global search dropdown (?lead=<id>)
+  useEffect(() => {
+    const leadId = searchParams.get("lead");
+    if (leadId) {
+      setDetailLeadId(parseInt(leadId));
+      searchParams.delete("lead");
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     Promise.all([getLeads(), getStages(), getContacts(), getTeamMembers()])

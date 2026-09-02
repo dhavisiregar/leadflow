@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { getContacts, createContact, updateContact, deleteContact, exportContacts, importContacts } from '../api'
 import { Plus, Trash2, Mail, Phone, Building2, X, Pencil, Download, Upload } from 'lucide-react'
 import ConfirmModal from '../components/ConfirmModal'
@@ -92,12 +93,24 @@ export default function Contacts() {
   const [search, setSearch] = useState('')
   const [showImport, setShowImport] = useState(false)
   const [csvError, setCsvError] = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
 
   useEffect(() => {
     getContacts()
       .then(res => setContacts(res.data))
       .finally(() => setLoading(false))
   }, [])
+
+  // Opened from the global search dropdown (?highlight=<id>)
+  useEffect(() => {
+    const id = searchParams.get('highlight')
+    if (id && contacts.length > 0) {
+      const found = contacts.find(c => c.id === parseInt(id))
+      if (found) setModal(found)
+      searchParams.delete('highlight')
+      setSearchParams(searchParams, { replace: true })
+    }
+  }, [searchParams, contacts, setSearchParams])
 
   const refetch = () => getContacts().then(res => setContacts(res.data))
 

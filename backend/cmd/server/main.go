@@ -48,6 +48,7 @@ func main() {
 	planH := &handler.PlanHandler{DB: db}
 	taskH := &handler.TaskHandler{DB: db}
 	reportH := &handler.ReportHandler{DB: db}
+	searchH := &handler.SearchHandler{DB: db}
 	teamH := &handler.TeamHandler{
 		DB:           db,
 		ResendAPIKey: cfg.ResendAPIKey,
@@ -122,6 +123,8 @@ func main() {
 	protected.DELETE("/tasks/:id", taskH.Delete)
 
 	protected.GET("/reports/summary", reportH.Summary)
+
+	protected.GET("/search", searchH.Search)
 
 	protected.GET("/team/members", teamH.List)
 	protected.POST("/team/invite", teamH.Invite, mw.RequireOwner)

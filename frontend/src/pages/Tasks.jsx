@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   getTasks,
   createTask,
@@ -129,6 +130,7 @@ function TaskRow({
   onRequestDelete,
   onUpdated,
   leads,
+  highlighted,
 }) {
   const [hovered, setHovered] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -247,10 +249,13 @@ function TaskRow({
   // ── Normal mode ──
   return (
     <div
+      id={`task-${task.id}`}
       className={`group flex items-start gap-3 px-3 py-2.5 rounded-lg border transition-all ${
-        task.is_completed
-          ? "bg-gray-50 dark:bg-gray-700/30 border-gray-100 dark:border-gray-700/50 opacity-60"
-          : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-brand-200 dark:hover:border-brand-700 hover:shadow-sm"
+        highlighted
+          ? "ring-2 ring-brand-400 dark:ring-brand-500 border-brand-300 dark:border-brand-600"
+          : task.is_completed
+            ? "bg-gray-50 dark:bg-gray-700/30 border-gray-100 dark:border-gray-700/50 opacity-60"
+            : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-brand-200 dark:hover:border-brand-700 hover:shadow-sm"
       }`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -608,6 +613,28 @@ export default function Tasks() {
   const [tab, setTab] = useState("all");
   const [groupByLead, setGroupByLead] = useState(false);
   const [featureError, setFeatureError] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [highlightId, setHighlightId] = useState(null);
+
+  // Opened from the global search dropdown (?highlight=<id>): show it
+  // regardless of the active tab, scroll it into view, and ring it briefly.
+  useEffect(() => {
+    const id = searchParams.get("highlight");
+    if (id) {
+      setHighlightId(parseInt(id));
+      setTab("all");
+      searchParams.delete("highlight");
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
+  useEffect(() => {
+    if (highlightId && tasks.some((t) => t.id === highlightId)) {
+      document.getElementById(`task-${highlightId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      const timer = setTimeout(() => setHighlightId(null), 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightId, tasks]);
 
   useEffect(() => {
     setLoading(true);
@@ -846,6 +873,7 @@ export default function Tasks() {
                     onComplete={handleComplete}
                     onRequestDelete={() => setConfirmId(task.id)}
                     onUpdated={handleUpdated}
+                    highlighted={task.id === highlightId}
                   />
                 ))}
                 {tab !== "completed" && (
@@ -870,6 +898,7 @@ export default function Tasks() {
               onComplete={handleComplete}
               onRequestDelete={() => setConfirmId(task.id)}
               onUpdated={handleUpdated}
+              highlighted={task.id === highlightId}
             />
           ))}
           {tab !== "completed" && (

@@ -7,6 +7,7 @@ import {
   CheckSquare, BarChart2, Menu, X, Sun, Moon, UserPlus,
 } from 'lucide-react'
 import { getPlan } from '../../api'
+import GlobalSearch from './GlobalSearch'
 
 const nav = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', end: true },
@@ -159,6 +160,11 @@ export default function Layout() {
             {dark ? <Sun size={16} /> : <Moon size={16} />}
           </button>
         </header>
+
+        {/* Topbar — global search */}
+        <div className="flex items-center px-4 sm:px-6 py-2.5 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
+          <GlobalSearch />
+        </div>
 
         {/* Page content */}
         <main className="flex-1 overflow-auto min-w-0">

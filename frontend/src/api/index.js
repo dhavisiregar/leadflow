@@ -68,6 +68,9 @@ export const deleteTask = (id) => api.delete(`/tasks/${id}`);
 export const getReportSummary = (days) =>
   api.get("/reports/summary", { params: { days } });
 
+// Global search
+export const globalSearch = (q) => api.get("/search", { params: { q } });
+
 // Team
 export const getTeamMembers = () => api.get("/team/members");
 export const inviteMember = (data) => api.post("/team/invite", data);

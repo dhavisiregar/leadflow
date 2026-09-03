@@ -71,6 +71,11 @@ export const getReportSummary = (days) =>
 // Global search
 export const globalSearch = (q) => api.get("/search", { params: { q } });
 
+// Notifications
+export const getNotifications = () => api.get("/notifications");
+export const markNotificationRead = (id) => api.patch(`/notifications/${id}/read`);
+export const markAllNotificationsRead = () => api.patch("/notifications/read-all");
+
 // Team
 export const getTeamMembers = () => api.get("/team/members");
 export const inviteMember = (data) => api.post("/team/invite", data);

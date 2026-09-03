@@ -6,19 +6,22 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dhavi/leadflow/internal/model"
 	"github.com/resend/resend-go/v2"
 	"gorm.io/gorm"
 )
 
 type StaleLeadJob struct {
-	DB            *gorm.DB
-	ResendAPIKey  string
-	FromEmail     string
+	DB           *gorm.DB
+	ResendAPIKey string
+	FromEmail    string
 }
 
 type staleLeadRow struct {
 	LeadID         uint
 	LeadTitle      string
+	TenantID       uint
+	OwnerID        uint
 	OwnerEmail     string
 	OwnerName      string
 	LastActivityAt *time.Time
@@ -46,13 +49,9 @@ func (j *StaleLeadJob) run() {
 }
 
 func (j *StaleLeadJob) runWithCutoff(cutoff time.Time) {
-	if j.ResendAPIKey == "" {
-		return
-	}
-
 	var rows []staleLeadRow
 	err := j.DB.Table("leads").
-		Select("leads.id as lead_id, leads.title as lead_title, leads.last_activity_at, leads.created_at, users.email as owner_email, users.name as owner_name").
+		Select("leads.id as lead_id, leads.title as lead_title, leads.tenant_id, leads.last_activity_at, leads.created_at, users.id as owner_id, users.email as owner_email, users.name as owner_name").
 		Joins("JOIN users ON leads.owner_id = users.id").
 		Joins("JOIN stages ON leads.stage_id = stages.id").
 		Where("stages.name NOT IN ?", []string{"Won", "Lost"}).
@@ -65,6 +64,24 @@ func (j *StaleLeadJob) runWithCutoff(cutoff time.Time) {
 	}
 
 	if len(rows) == 0 {
+		return
+	}
+
+	// In-app notification per stale lead, regardless of whether email
+	// sending is configured.
+	for _, r := range rows {
+		days := int(time.Since(r.CreatedAt).Hours() / 24)
+		if r.LastActivityAt != nil {
+			days = int(time.Since(*r.LastActivityAt).Hours() / 24)
+		}
+		upsertNotification(j.DB, r.TenantID, r.OwnerID, model.NotifLeadStale,
+			"Stale lead needs follow-up",
+			fmt.Sprintf("%s — %d days since last activity", r.LeadTitle, days),
+			"lead", r.LeadID,
+		)
+	}
+
+	if j.ResendAPIKey == "" {
 		return
 	}
 

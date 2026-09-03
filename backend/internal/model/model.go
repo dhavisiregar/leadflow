@@ -139,3 +139,26 @@ type Activity struct {
 	CreatedAt   time.Time    `json:"created_at"`
 	UpdatedAt   time.Time    `json:"updated_at"`
 }
+
+// ── Notification ──────────────────────────────────────────────────────────────
+
+type NotificationType string
+
+const (
+	NotifTaskDue     NotificationType = "task_due"
+	NotifTaskOverdue NotificationType = "task_overdue"
+	NotifLeadStale   NotificationType = "lead_stale"
+)
+
+type Notification struct {
+	ID                uint             `gorm:"primaryKey" json:"id"`
+	TenantID          uint             `gorm:"not null;index:idx_notifications_tenant_user,priority:1" json:"tenant_id"`
+	UserID            uint             `gorm:"not null;index:idx_notifications_tenant_user,priority:2" json:"user_id"`
+	Type              NotificationType `gorm:"not null" json:"type"`
+	Title             string           `gorm:"not null" json:"title"`
+	Message           string           `json:"message"`
+	IsRead            bool             `gorm:"not null;default:false;index:idx_notifications_tenant_user,priority:3" json:"is_read"`
+	RelatedEntityType string           `json:"related_entity_type"`
+	RelatedEntityID   *uint            `json:"related_entity_id"`
+	CreatedAt         time.Time        `json:"created_at"`
+}

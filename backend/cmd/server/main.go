@@ -49,6 +49,7 @@ func main() {
 	taskH := &handler.TaskHandler{DB: db}
 	reportH := &handler.ReportHandler{DB: db}
 	searchH := &handler.SearchHandler{DB: db}
+	notifH := &handler.NotificationHandler{DB: db}
 	teamH := &handler.TeamHandler{
 		DB:           db,
 		ResendAPIKey: cfg.ResendAPIKey,
@@ -69,6 +70,9 @@ func main() {
 		FromEmail:    cfg.AlertFromEmail,
 	}
 	staleJob.Start()
+
+	taskReminderJob := &job.TaskReminderJob{DB: db}
+	taskReminderJob.Start()
 
 	// ── Routes ────────────────────────────────────────────────────────────────
 	api := e.Group("/api/v1")
@@ -125,6 +129,10 @@ func main() {
 	protected.GET("/reports/summary", reportH.Summary)
 
 	protected.GET("/search", searchH.Search)
+
+	protected.GET("/notifications", notifH.List)
+	protected.PATCH("/notifications/read-all", notifH.MarkAllRead)
+	protected.PATCH("/notifications/:id/read", notifH.MarkRead)
 
 	protected.GET("/team/members", teamH.List)
 	protected.POST("/team/invite", teamH.Invite, mw.RequireOwner)

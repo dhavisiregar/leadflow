@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { getPlan } from '../../api'
 import GlobalSearch from './GlobalSearch'
+import NotificationBell from './NotificationBell'
 
 const nav = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', end: true },
@@ -161,9 +162,12 @@ export default function Layout() {
           </button>
         </header>
 
-        {/* Topbar — global search */}
-        <div className="flex items-center px-4 sm:px-6 py-2.5 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
+        {/* Topbar — global search + notifications */}
+        <div className="flex items-center gap-3 px-4 sm:px-6 py-2.5 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
           <GlobalSearch />
+          <div className="ml-auto flex-shrink-0">
+            <NotificationBell />
+          </div>
         </div>
 
         {/* Page content */}

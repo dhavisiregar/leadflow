@@ -52,6 +52,8 @@ func main() {
 	reportH := &handler.ReportHandler{DB: db}
 	teamH := &handler.TeamHandler{DB: db}
 	teamMemberH := &handler.TeamMemberHandler{DB: db}
+	searchH := &handler.SearchHandler{DB: db}
+	notifH := &handler.NotificationHandler{DB: db}
 	paymentH := &handler.PaymentHandler{
 		DB:         db,
 		ServerKey:  cfg.MidtransServerKey,
@@ -66,6 +68,9 @@ func main() {
 		FromEmail:    cfg.AlertFromEmail,
 	}
 	staleJob.Start()
+
+	taskReminderJob := &job.TaskReminderJob{DB: db}
+	taskReminderJob.Start()
 
 	// ── Routes ────────────────────────────────────────────────────────────────
 	api := e.Group("/api/v1")
@@ -96,6 +101,9 @@ func main() {
 	protected.DELETE("/leads/:id", leadH.Delete)
 	protected.PATCH("/leads/:id/stage", leadH.MoveStage)
 	protected.PATCH("/leads/:id/status", leadH.UpdateStatus)
+	protected.PATCH("/leads/:id/assign", leadH.Assign)
+	protected.GET("/leads/export", leadH.Export)
+	protected.POST("/leads/import", leadH.Import)
 
 	protected.POST("/leads/:id/services", leadServiceH.Create)
 	protected.DELETE("/leads/:id/services/:service_id", leadServiceH.Delete)
@@ -120,6 +128,8 @@ func main() {
 	protected.GET("/contacts/:id", contactH.Get)
 	protected.PUT("/contacts/:id", contactH.Update)
 	protected.DELETE("/contacts/:id", contactH.Delete)
+	protected.GET("/contacts/export", contactH.Export)
+	protected.POST("/contacts/import", contactH.Import)
 
 	protected.GET("/tasks", taskH.List)
 	protected.POST("/tasks", taskH.Create)
@@ -128,6 +138,12 @@ func main() {
 	protected.DELETE("/tasks/:id", taskH.Delete)
 
 	protected.GET("/reports/summary", reportH.Summary)
+
+	protected.GET("/search", searchH.Search)
+
+	protected.GET("/notifications", notifH.List)
+	protected.PATCH("/notifications/read-all", notifH.MarkAllRead)
+	protected.PATCH("/notifications/:id/read", notifH.MarkRead)
 
 	// Health check
 	e.GET("/health", func(c echo.Context) error {

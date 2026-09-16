@@ -59,20 +59,21 @@ func (h *ReportHandler) Summary(c echo.Context) error {
 		Order("month asc").
 		Scan(&leadsCreated)
 
+	// Won/Lost is tracked via Lead.Status (BRD) rather than stage name — see
+	// migrate_brd.go. Filtering on status here (instead of joining stages)
+	// keeps these reports correct for both BRD-migrated and legacy tenants.
 	var revenueWon []MonthRevenue
 	h.DB.Model(&model.Lead{}).
-		Joins("JOIN stages ON stages.id = leads.stage_id").
 		Select("TO_CHAR(leads.updated_at, 'YYYY-MM') as month, COALESCE(SUM(leads.value), 0) as value").
-		Where("leads.tenant_id = ? AND stages.name = 'Won' AND leads.updated_at >= ?", tenantID, from).
+		Where("leads.tenant_id = ? AND leads.status = 'won' AND leads.updated_at >= ?", tenantID, from).
 		Group("month").
 		Order("month asc").
 		Scan(&revenueWon)
 
 	var topCloseReasons []CloseReasonCount
 	h.DB.Model(&model.Lead{}).
-		Joins("JOIN stages ON stages.id = leads.stage_id").
 		Select("leads.close_reason as reason, COUNT(*) as count").
-		Where("leads.tenant_id = ? AND stages.name IN ('Won','Lost') AND leads.close_reason != '' AND leads.updated_at >= ?", tenantID, from).
+		Where("leads.tenant_id = ? AND leads.status IN ('won','lost') AND leads.close_reason != '' AND leads.updated_at >= ?", tenantID, from).
 		Group("leads.close_reason").
 		Order("count desc").
 		Limit(5).
@@ -84,23 +85,20 @@ func (h *ReportHandler) Summary(c echo.Context) error {
 	}
 	var wonStats WonStats
 	h.DB.Model(&model.Lead{}).
-		Joins("JOIN stages ON stages.id = leads.stage_id").
 		Select("COUNT(*) as count, COALESCE(SUM(leads.value), 0) as total").
-		Where("leads.tenant_id = ? AND stages.name = 'Won' AND leads.updated_at >= ?", tenantID, from).
+		Where("leads.tenant_id = ? AND leads.status = 'won' AND leads.updated_at >= ?", tenantID, from).
 		Scan(&wonStats)
 
 	var avgDealValue float64
 	h.DB.Model(&model.Lead{}).
-		Joins("JOIN stages ON stages.id = leads.stage_id").
 		Select("COALESCE(AVG(leads.value), 0)").
-		Where("leads.tenant_id = ? AND stages.name = 'Won' AND leads.updated_at >= ?", tenantID, from).
+		Where("leads.tenant_id = ? AND leads.status = 'won' AND leads.updated_at >= ?", tenantID, from).
 		Scan(&avgDealValue)
 
 	var avgDaysToClose float64
 	h.DB.Model(&model.Lead{}).
-		Joins("JOIN stages ON stages.id = leads.stage_id").
 		Select("COALESCE(AVG(EXTRACT(EPOCH FROM (leads.updated_at - leads.created_at)) / 86400), 0)").
-		Where("leads.tenant_id = ? AND stages.name = 'Won' AND leads.updated_at >= ?", tenantID, from).
+		Where("leads.tenant_id = ? AND leads.status = 'won' AND leads.updated_at >= ?", tenantID, from).
 		Scan(&avgDaysToClose)
 
 	if leadsCreated == nil {

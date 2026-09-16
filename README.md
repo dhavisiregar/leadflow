@@ -43,6 +43,7 @@ A full-stack CRM application for managing leads, contacts, tasks, and sales pipe
 - 📱 **Responsive Design** — Works seamlessly on desktop, tablet, and mobile
 - ⌨️ **Keyboard Navigation** — Escape to cancel, Enter to submit
 - 🎨 **Modern UI** — Tailwind CSS with smooth animations and transitions
+- 🔑 **Continue with Google** — Sign in with Google Identity Services; first-time users are auto-provisioned a tenant/owner account
 
 ## Tech Stack
 
@@ -52,7 +53,7 @@ A full-stack CRM application for managing leads, contacts, tasks, and sales pipe
 - **Framework**: Echo v4
 - **Database**: PostgreSQL
 - **ORM**: GORM
-- **Authentication**: JWT (multi-tenant)
+- **Authentication**: JWT (multi-tenant), Google Identity Services (ID token verified against Google's JWKS)
 - **Email**: Resend API
 - **Payments**: Midtrans (sandbox/production)
 
@@ -113,6 +114,7 @@ DB_NAME=leadflow
 DB_SSLMODE=disable
 JWT_SECRET=your-random-secret-key
 JWT_EXPIRES_HOURS=72
+GOOGLE_CLIENT_ID=your-google-oauth-client-id
 MIDTRANS_SERVER_KEY=your-midtrans-key
 MIDTRANS_CLIENT_KEY=your-midtrans-client-key
 MIDTRANS_ENV=sandbox
@@ -125,6 +127,7 @@ ALLOWED_ORIGINS=http://localhost:5173
 
 ```
 VITE_API_URL=http://localhost:8080/api/v1
+VITE_GOOGLE_CLIENT_ID=your-google-oauth-client-id
 ```
 
 ## Project Structure
@@ -157,6 +160,7 @@ leadflow/
 
 - `POST /auth/register` — Register new account
 - `POST /auth/login` — Login and get JWT token
+- `POST /auth/google` — Sign in with a Google ID token (auto-provisions a tenant/owner account for first-time users)
 - `GET /auth/me` — Get current user profile
 
 ### Leads

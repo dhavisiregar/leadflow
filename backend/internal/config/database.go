@@ -33,6 +33,7 @@ func NewDB(cfg *Config) (*gorm.DB, error) {
 		&model.LeadService{},
 		&model.Activity{},
 		&model.Task{},
+		&model.Notification{},
 	); err != nil {
 		return nil, err
 	}

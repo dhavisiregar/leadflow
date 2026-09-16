@@ -78,9 +78,9 @@ type Team struct {
 
 type Contact struct {
 	ID        uint           `gorm:"primaryKey" json:"id"`
-	TenantID  uint           `gorm:"not null;index" json:"tenant_id"`
-	Name      string         `gorm:"not null" json:"name"`
-	Email     string         `json:"email"`
+	TenantID  uint           `gorm:"not null;index;index:idx_contacts_tenant_name,priority:1;index:idx_contacts_tenant_email,priority:1" json:"tenant_id"`
+	Name      string         `gorm:"not null;index:idx_contacts_tenant_name,priority:2" json:"name"`
+	Email     string         `gorm:"index:idx_contacts_tenant_email,priority:2" json:"email"`
 	Phone     string         `json:"phone"`
 	Company   string         `json:"company"`
 	Notes     string         `json:"notes"`
@@ -114,14 +114,14 @@ const (
 
 type Lead struct {
 	ID             uint           `gorm:"primaryKey" json:"id"`
-	TenantID       uint           `gorm:"not null;index" json:"tenant_id"`
+	TenantID       uint           `gorm:"not null;index;index:idx_leads_tenant_title,priority:1" json:"tenant_id"`
 	ContactID      *uint          `json:"contact_id"`
 	Contact        *Contact       `gorm:"foreignKey:ContactID" json:"contact,omitempty"`
 	StageID        uint           `gorm:"not null" json:"stage_id"`
 	Stage          *Stage         `gorm:"foreignKey:StageID" json:"stage,omitempty"`
 	OwnerID        uint           `gorm:"not null" json:"owner_id"`
 	Owner          *User          `gorm:"foreignKey:OwnerID" json:"owner,omitempty"`
-	Title          string         `gorm:"not null" json:"title"`
+	Title          string         `gorm:"not null;index:idx_leads_tenant_title,priority:2" json:"title"`
 	Company        string         `json:"company"`
 	LeadType       string         `gorm:"default:'new'" json:"lead_type"` // "new" | "existing"
 	Source         string         `json:"source"`
@@ -154,12 +154,12 @@ type LeadService struct {
 
 type Task struct {
 	ID          uint           `gorm:"primaryKey" json:"id"`
-	TenantID    uint           `gorm:"not null;index" json:"tenant_id"`
+	TenantID    uint           `gorm:"not null;index;index:idx_tasks_tenant_title,priority:1" json:"tenant_id"`
 	LeadID      *uint          `json:"lead_id"`
 	Lead        *Lead          `gorm:"foreignKey:LeadID" json:"lead,omitempty"`
 	OwnerID     uint           `gorm:"not null" json:"owner_id"`
 	Owner       *User          `gorm:"foreignKey:OwnerID" json:"owner,omitempty"`
-	Title       string         `gorm:"not null" json:"title"`
+	Title       string         `gorm:"not null;index:idx_tasks_tenant_title,priority:2" json:"title"`
 	Priority    string         `gorm:"default:'medium'" json:"priority"`
 	DueDate     *time.Time     `json:"due_date"`
 	IsCompleted bool           `gorm:"default:false" json:"is_completed"`
@@ -188,4 +188,27 @@ type Activity struct {
 	Note        string       `json:"note"`
 	CreatedAt   time.Time    `json:"created_at"`
 	UpdatedAt   time.Time    `json:"updated_at"`
+}
+
+// ── Notification ──────────────────────────────────────────────────────────────
+
+type NotificationType string
+
+const (
+	NotifTaskDue     NotificationType = "task_due"
+	NotifTaskOverdue NotificationType = "task_overdue"
+	NotifLeadStale   NotificationType = "lead_stale"
+)
+
+type Notification struct {
+	ID                uint             `gorm:"primaryKey" json:"id"`
+	TenantID          uint             `gorm:"not null;index:idx_notifications_tenant_user,priority:1" json:"tenant_id"`
+	UserID            uint             `gorm:"not null;index:idx_notifications_tenant_user,priority:2" json:"user_id"`
+	Type              NotificationType `gorm:"not null" json:"type"`
+	Title             string           `gorm:"not null" json:"title"`
+	Message           string           `json:"message"`
+	IsRead            bool             `gorm:"not null;default:false;index:idx_notifications_tenant_user,priority:3" json:"is_read"`
+	RelatedEntityType string           `json:"related_entity_type"`
+	RelatedEntityID   *uint            `json:"related_entity_id"`
+	CreatedAt         time.Time        `json:"created_at"`
 }

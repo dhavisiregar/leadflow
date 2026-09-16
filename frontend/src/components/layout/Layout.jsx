@@ -7,6 +7,8 @@ import {
   CheckSquare, BarChart2, Menu, X, Sun, Moon, UsersRound,
 } from 'lucide-react'
 import { getPlan } from '../../api'
+import GlobalSearch from './GlobalSearch'
+import NotificationBell from './NotificationBell'
 
 const PIPELINE_LABELS = {
   sales: 'My Pipeline',
@@ -172,6 +174,14 @@ export default function Layout() {
             {dark ? <Sun size={16} /> : <Moon size={16} />}
           </button>
         </header>
+
+        {/* Topbar — global search + notifications */}
+        <div className="flex items-center gap-3 px-4 sm:px-6 py-2.5 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
+          <GlobalSearch />
+          <div className="ml-auto flex-shrink-0">
+            <NotificationBell />
+          </div>
+        </div>
 
         {/* Page content */}
         <main className="flex-1 overflow-auto min-w-0">

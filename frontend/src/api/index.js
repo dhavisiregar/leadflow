@@ -26,6 +26,14 @@ export const moveLead = (id, stage_id, close_reason, close_note) =>
   api.patch(`/leads/${id}/stage`, { stage_id, close_reason, close_note });
 export const updateLeadStatus = (id, status, close_reason, close_note) =>
   api.patch(`/leads/${id}/status`, { status, close_reason, close_note });
+export const assignLead = (id, owner_id) =>
+  api.patch(`/leads/${id}/assign`, { owner_id });
+export const exportLeads = () => api.get("/leads/export", { responseType: "blob" });
+export const importLeads = (file) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  return api.post("/leads/import", formData);
+};
 
 // Lead products & services
 export const addLeadService = (leadId, data) =>
@@ -50,6 +58,12 @@ export const getContacts = () => api.get("/contacts");
 export const createContact = (data) => api.post("/contacts", data);
 export const updateContact = (id, data) => api.put(`/contacts/${id}`, data);
 export const deleteContact = (id) => api.delete(`/contacts/${id}`);
+export const exportContacts = () => api.get("/contacts/export", { responseType: "blob" });
+export const importContacts = (file) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  return api.post("/contacts/import", formData);
+};
 
 // Activities
 export const getActivities = (leadId) => api.get(`/leads/${leadId}/activities`);
@@ -74,3 +88,11 @@ export const deleteTask = (id) => api.delete(`/tasks/${id}`);
 // Reports
 export const getReportSummary = (days) =>
   api.get("/reports/summary", { params: { days } });
+
+// Global search
+export const globalSearch = (q) => api.get("/search", { params: { q } });
+
+// Notifications
+export const getNotifications = () => api.get("/notifications");
+export const markNotificationRead = (id) => api.patch(`/notifications/${id}/read`);
+export const markAllNotificationsRead = () => api.patch("/notifications/read-all");

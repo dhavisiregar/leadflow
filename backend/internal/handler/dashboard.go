@@ -13,72 +13,6 @@ type DashboardHandler struct {
 	DB *gorm.DB
 }
 
-// GET /api/v1/dashboard/stats
-// Role-scoped: a Sales rep only ever sees their own numbers here (the BRD
-// explicitly forbids Sales from seeing the team dashboard); Owner/Data
-// Analyst keep the original tenant-wide view.
-func (h *DashboardHandler) Stats(c echo.Context) error {
-	tenantID := c.Get("tenant_id").(uint)
-	role := c.Get("role").(model.Role)
-	userID := c.Get("user_id").(uint)
-
-	scoped := func() *gorm.DB {
-		return mw.ScopeLeadsByRole(h.DB.Model(&model.Lead{}).Where("leads.tenant_id = ?", tenantID), role, userID)
-	}
-
-	// Total leads
-	var totalLeads int64
-	scoped().Count(&totalLeads)
-
-	// Pipeline value (sum of all open leads — status active)
-	var pipelineValue float64
-	scoped().Where("leads.status = ?", model.LeadStatusActive).
-		Select("COALESCE(SUM(leads.value), 0)").Scan(&pipelineValue)
-
-	// Won leads count
-	var wonCount int64
-	scoped().Where("leads.status = ?", model.LeadStatusWon).Count(&wonCount)
-
-	// Conversion rate
-	var conversionRate float64
-	if totalLeads > 0 {
-		conversionRate = float64(wonCount) / float64(totalLeads) * 100
-	}
-
-	// Activities this month
-	var activitiesThisMonth int64
-	mw.ScopeLeadsByRole(
-		h.DB.Model(&model.Activity{}).
-			Joins("JOIN leads ON leads.id = activities.lead_id").
-			Where("leads.tenant_id = ? AND DATE_TRUNC('month', activities.created_at) = DATE_TRUNC('month', NOW())", tenantID),
-		role, userID,
-	).Count(&activitiesThisMonth)
-
-	// Leads per stage
-	type StageCount struct {
-		StageName string  `json:"stage_name"`
-		Color     string  `json:"color"`
-		Count     int64   `json:"count"`
-		Value     float64 `json:"value"`
-	}
-	var stageCounts []StageCount
-	scoped().
-		Select("stages.name as stage_name, stages.color, COUNT(leads.id) as count, COALESCE(SUM(leads.value), 0) as value").
-		Joins("JOIN stages ON stages.id = leads.stage_id").
-		Group("stages.name, stages.color, stages.order").
-		Order("stages.order").
-		Scan(&stageCounts)
-
-	return c.JSON(http.StatusOK, echo.Map{
-		"total_leads":           totalLeads,
-		"pipeline_value":        pipelineValue,
-		"won_count":             wonCount,
-		"conversion_rate":       conversionRate,
-		"activities_this_month": activitiesThisMonth,
-		"leads_by_stage":        stageCounts,
-	})
-}
-
 // GET /api/v1/dashboard/analytics
 // Read-only, role-scoped analytics for Unit Head / Manager / Data Analyst /
 // Owner, with breakdowns per sales rep and per team, per the BRD.
@@ -87,7 +21,7 @@ func (h *DashboardHandler) Analytics(c echo.Context) error {
 	role := c.Get("role").(model.Role)
 	userID := c.Get("user_id").(uint)
 
-	if role == model.RoleSales || role == model.RoleMember {
+	if role == model.RoleSales {
 		return echo.NewHTTPError(http.StatusForbidden, "analytics dashboard is not available for your role")
 	}
 

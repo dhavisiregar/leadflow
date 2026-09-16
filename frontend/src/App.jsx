@@ -4,14 +4,11 @@ import { ThemeProvider } from './context/ThemeContext'
 import Layout from './components/layout/Layout'
 import Login from './pages/Login'
 import Register from './pages/Register'
-import Dashboard from './pages/Dashboard'
 import Pipeline from './pages/Pipeline'
-import Contacts from './pages/Contacts'
-import Billing from './pages/Billing'
-import Tasks from './pages/Tasks'
-import Reports from './pages/Reports'
 import Analytics from './pages/Analytics'
 import TeamMembers from './pages/TeamMembers'
+
+const OBSERVER_ROLES = ['unit_head', 'manager', 'data_analyst']
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -30,6 +27,13 @@ function RoleRoute({ roles, children }) {
   return roles.includes(user?.role) ? children : <Navigate to="/" replace />
 }
 
+// "My Pipeline" for Sales/Owner (the BRD's Eksekutor Operasional); the
+// read-only analytics Dashboard for Unit Head/Manager/Data Analyst (Observer).
+function Home() {
+  const { user } = useAuth()
+  return OBSERVER_ROLES.includes(user?.role) ? <Analytics /> : <Pipeline />
+}
+
 export default function App() {
   return (
     <ThemeProvider>
@@ -39,20 +43,7 @@ export default function App() {
           <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
           <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
           <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
-            <Route index element={<Dashboard />} />
-            <Route path="pipeline" element={<Pipeline />} />
-            <Route path="tasks" element={<Tasks />} />
-            <Route path="contacts" element={<Contacts />} />
-            <Route path="reports" element={<Reports />} />
-            <Route path="billing" element={<Billing />} />
-            <Route
-              path="analytics"
-              element={
-                <RoleRoute roles={['owner', 'unit_head', 'manager', 'data_analyst']}>
-                  <Analytics />
-                </RoleRoute>
-              }
-            />
+            <Route index element={<Home />} />
             <Route
               path="team-members"
               element={

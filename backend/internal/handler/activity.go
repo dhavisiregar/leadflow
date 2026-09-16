@@ -47,13 +47,14 @@ func (h *ActivityHandler) Create(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusNotFound, "lead not found")
 	}
 
-	var activity model.Activity
-	if err := c.Bind(&activity); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
+	var body struct {
+		Note string `json:"note"`
 	}
-	activity.LeadID = uint(leadID)
-	activity.CreatedByID = userID
+	if err := c.Bind(&body); err != nil || body.Note == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "note is required")
+	}
 
+	activity := model.Activity{LeadID: uint(leadID), CreatedByID: userID, Note: body.Note}
 	if err := h.DB.Create(&activity).Error; err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to create activity")
 	}
@@ -61,6 +62,7 @@ func (h *ActivityHandler) Create(c echo.Context) error {
 	now := time.Now()
 	h.DB.Model(&model.Lead{}).Where("id = ?", leadID).Update("last_activity_at", now)
 
+	h.DB.Preload("CreatedBy").First(&activity, activity.ID)
 	return c.JSON(http.StatusCreated, activity)
 }
 
@@ -80,17 +82,13 @@ func (h *ActivityHandler) Update(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusForbidden, "cannot edit other users' activities")
 	}
 
-	var update model.Activity
-	if err := c.Bind(&update); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
+	var body struct {
+		Note string `json:"note"`
 	}
-
-	if update.Type != "" {
-		activity.Type = update.Type
+	if err := c.Bind(&body); err != nil || body.Note == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "note is required")
 	}
-	if update.Note != "" {
-		activity.Note = update.Note
-	}
+	activity.Note = body.Note
 
 	if err := h.DB.Save(&activity).Error; err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to update activity")

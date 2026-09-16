@@ -8,33 +8,24 @@ import (
 
 // ── Tenant ────────────────────────────────────────────────────────────────────
 
-type Plan string
-
-const (
-	PlanFree    Plan = "free"
-	PlanStarter Plan = "starter"
-	PlanPro     Plan = "pro"
-	PlanTeam    Plan = "team"
-)
-
 type Tenant struct {
-	ID         uint           `gorm:"primaryKey" json:"id"`
-	Name       string         `gorm:"not null" json:"name"`
-	Slug       string         `gorm:"uniqueIndex;not null" json:"slug"`
-	Plan       Plan           `gorm:"default:'free'" json:"plan"`
-	LeadsCount int            `gorm:"default:0" json:"leads_count"`
-	CreatedAt  time.Time      `json:"created_at"`
-	UpdatedAt  time.Time      `json:"updated_at"`
-	DeletedAt  gorm.DeletedAt `gorm:"index" json:"-"`
+	ID        uint           `gorm:"primaryKey" json:"id"`
+	Name      string         `gorm:"not null" json:"name"`
+	Slug      string         `gorm:"uniqueIndex;not null" json:"slug"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 // ── User ──────────────────────────────────────────────────────────────────────
 
+// Role is the BRD's four-tier org hierarchy (Sales/Unit Head/Manager/Data
+// Analyst), plus Owner — the tenant's admin, who bootstraps the account and
+// manages Team Members.
 type Role string
 
 const (
 	RoleOwner       Role = "owner"
-	RoleMember      Role = "member"
 	RoleSales       Role = "sales"
 	RoleUnitHead    Role = "unit_head"
 	RoleManager     Role = "manager"
@@ -48,7 +39,7 @@ type User struct {
 	Name      string         `gorm:"not null" json:"name"`
 	Email     string         `gorm:"uniqueIndex;not null" json:"email"`
 	Password  string         `gorm:"not null" json:"-"`
-	Role      Role           `gorm:"default:'member'" json:"role"`
+	Role      Role           `gorm:"default:'sales'" json:"role"`
 	TeamID    *uint          `json:"team_id"`
 	Team      *Team          `gorm:"foreignKey:TeamID;constraint:-" json:"team,omitempty"`
 	CreatedAt time.Time      `json:"created_at"`
@@ -72,21 +63,6 @@ type Team struct {
 	CreatedAt  time.Time      `json:"created_at"`
 	UpdatedAt  time.Time      `json:"updated_at"`
 	DeletedAt  gorm.DeletedAt `gorm:"index" json:"-"`
-}
-
-// ── Contact ───────────────────────────────────────────────────────────────────
-
-type Contact struct {
-	ID        uint           `gorm:"primaryKey" json:"id"`
-	TenantID  uint           `gorm:"not null;index;index:idx_contacts_tenant_name,priority:1;index:idx_contacts_tenant_email,priority:1" json:"tenant_id"`
-	Name      string         `gorm:"not null;index:idx_contacts_tenant_name,priority:2" json:"name"`
-	Email     string         `gorm:"index:idx_contacts_tenant_email,priority:2" json:"email"`
-	Phone     string         `json:"phone"`
-	Company   string         `json:"company"`
-	Notes     string         `json:"notes"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 // ── Stage ─────────────────────────────────────────────────────────────────────
@@ -114,21 +90,18 @@ const (
 
 type Lead struct {
 	ID             uint           `gorm:"primaryKey" json:"id"`
-	TenantID       uint           `gorm:"not null;index;index:idx_leads_tenant_title,priority:1" json:"tenant_id"`
-	ContactID      *uint          `json:"contact_id"`
-	Contact        *Contact       `gorm:"foreignKey:ContactID" json:"contact,omitempty"`
+	TenantID       uint           `gorm:"not null;index" json:"tenant_id"`
 	StageID        uint           `gorm:"not null" json:"stage_id"`
 	Stage          *Stage         `gorm:"foreignKey:StageID" json:"stage,omitempty"`
 	OwnerID        uint           `gorm:"not null" json:"owner_id"`
 	Owner          *User          `gorm:"foreignKey:OwnerID" json:"owner,omitempty"`
-	Title          string         `gorm:"not null;index:idx_leads_tenant_title,priority:2" json:"title"`
-	Company        string         `json:"company"`
+	Company        string         `gorm:"not null" json:"company"`
+	Title          string         `gorm:"not null" json:"title"`          // Project name
 	LeadType       string         `gorm:"default:'new'" json:"lead_type"` // "new" | "existing"
 	Source         string         `json:"source"`
 	Status         LeadStatus     `gorm:"default:'active';index" json:"status"`
 	Value          float64        `gorm:"default:0" json:"value"`
 	Services       []LeadService  `gorm:"foreignKey:LeadID" json:"services,omitempty"`
-	Notes          string         `json:"notes"`
 	CloseReason    string         `json:"close_reason"`
 	CloseNote      string         `json:"close_note"`
 	LastActivityAt *time.Time     `json:"last_activity_at"`
@@ -140,7 +113,7 @@ type Lead struct {
 // ── Lead Service (Products & Services line items) ───────────────────────────────
 
 // LeadService is one product/service line item on a lead; the sum of all of a
-// lead's services is kept in sync with Lead.Value once any exist.
+// lead's services is kept in sync with Lead.Value.
 type LeadService struct {
 	ID        uint      `gorm:"primaryKey" json:"id"`
 	LeadID    uint      `gorm:"not null;index" json:"lead_id"`
@@ -150,65 +123,15 @@ type LeadService struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-// ── Task ──────────────────────────────────────────────────────────────────────
+// ── Activity (Notes & updates) ───────────────────────────────────────────────
 
-type Task struct {
-	ID          uint           `gorm:"primaryKey" json:"id"`
-	TenantID    uint           `gorm:"not null;index;index:idx_tasks_tenant_title,priority:1" json:"tenant_id"`
-	LeadID      *uint          `json:"lead_id"`
-	Lead        *Lead          `gorm:"foreignKey:LeadID" json:"lead,omitempty"`
-	OwnerID     uint           `gorm:"not null" json:"owner_id"`
-	Owner       *User          `gorm:"foreignKey:OwnerID" json:"owner,omitempty"`
-	Title       string         `gorm:"not null;index:idx_tasks_tenant_title,priority:2" json:"title"`
-	Priority    string         `gorm:"default:'medium'" json:"priority"`
-	DueDate     *time.Time     `json:"due_date"`
-	IsCompleted bool           `gorm:"default:false" json:"is_completed"`
-	CreatedAt   time.Time      `json:"created_at"`
-	UpdatedAt   time.Time      `json:"updated_at"`
-	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
-}
-
-// ── Activity ──────────────────────────────────────────────────────────────────
-
-type ActivityType string
-
-const (
-	ActivityCall    ActivityType = "call"
-	ActivityEmail   ActivityType = "email"
-	ActivityMeeting ActivityType = "meeting"
-	ActivityNote    ActivityType = "note"
-)
-
+// Activity is one timestamped entry in a lead's "Notes & updates" history.
 type Activity struct {
-	ID          uint         `gorm:"primaryKey" json:"id"`
-	LeadID      uint         `gorm:"not null;index" json:"lead_id"`
-	CreatedByID uint         `gorm:"not null" json:"created_by_id"`
-	CreatedBy   *User        `gorm:"foreignKey:CreatedByID" json:"created_by,omitempty"`
-	Type        ActivityType `gorm:"not null" json:"type"`
-	Note        string       `json:"note"`
-	CreatedAt   time.Time    `json:"created_at"`
-	UpdatedAt   time.Time    `json:"updated_at"`
-}
-
-// ── Notification ──────────────────────────────────────────────────────────────
-
-type NotificationType string
-
-const (
-	NotifTaskDue     NotificationType = "task_due"
-	NotifTaskOverdue NotificationType = "task_overdue"
-	NotifLeadStale   NotificationType = "lead_stale"
-)
-
-type Notification struct {
-	ID                uint             `gorm:"primaryKey" json:"id"`
-	TenantID          uint             `gorm:"not null;index:idx_notifications_tenant_user,priority:1" json:"tenant_id"`
-	UserID            uint             `gorm:"not null;index:idx_notifications_tenant_user,priority:2" json:"user_id"`
-	Type              NotificationType `gorm:"not null" json:"type"`
-	Title             string           `gorm:"not null" json:"title"`
-	Message           string           `json:"message"`
-	IsRead            bool             `gorm:"not null;default:false;index:idx_notifications_tenant_user,priority:3" json:"is_read"`
-	RelatedEntityType string           `json:"related_entity_type"`
-	RelatedEntityID   *uint            `json:"related_entity_id"`
-	CreatedAt         time.Time        `json:"created_at"`
+	ID          uint      `gorm:"primaryKey" json:"id"`
+	LeadID      uint      `gorm:"not null;index" json:"lead_id"`
+	CreatedByID uint      `gorm:"not null" json:"created_by_id"`
+	CreatedBy   *User     `gorm:"foreignKey:CreatedByID" json:"created_by,omitempty"`
+	Note        string    `json:"note"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }

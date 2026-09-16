@@ -3,7 +3,6 @@ import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import {
   getLeads,
   getStages,
-  getContacts,
   getLead,
   getActivities,
   createActivity,
@@ -22,11 +21,6 @@ import {
   Trash2,
   DollarSign,
   X,
-  Clock,
-  Phone,
-  Mail,
-  MessageSquare,
-  FileText,
   User as UserIcon,
   Kanban,
   List as ListIcon,
@@ -34,7 +28,6 @@ import {
   Pencil,
 } from "lucide-react";
 import ConfirmModal from "../components/ConfirmModal";
-import { useAuth } from "../context/AuthContext";
 
 const CLOSE_REASONS = [
   "Price",
@@ -61,23 +54,6 @@ const STATUS_COLORS = {
   lost: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400",
 };
 
-const ACT_ICONS = {
-  call: Phone,
-  email: Mail,
-  meeting: MessageSquare,
-  note: FileText,
-};
-const ACT_COLORS = {
-  call: "text-blue-500",
-  email: "text-green-500",
-  meeting: "text-purple-500",
-  note: "text-gray-400 dark:text-gray-500",
-};
-
-function canManageLeads(role) {
-  return role === "owner" || role === "sales";
-}
-
 function matchesSearch(lead, search) {
   if (!search.trim()) return true;
   const q = search.toLowerCase();
@@ -85,27 +61,6 @@ function matchesSearch(lead, search) {
     lead.title?.toLowerCase().includes(q) ||
     lead.company?.toLowerCase().includes(q) ||
     (lead.services || []).some((s) => s.name?.toLowerCase().includes(q))
-  );
-}
-
-function AgingBadge({ lead }) {
-  const ref = lead.last_activity_at
-    ? new Date(lead.last_activity_at)
-    : new Date(lead.created_at);
-  const days = Math.floor((Date.now() - ref.getTime()) / 86400000);
-  const cls =
-    days < 3
-      ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
-      : days <= 7
-        ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400"
-        : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400";
-  return (
-    <span
-      className={`inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded ${cls}`}
-    >
-      <Clock size={9} />
-      {days}d
-    </span>
   );
 }
 
@@ -205,13 +160,12 @@ function CloseReasonModal({ label, isWon, onConfirm, onCancel }) {
   );
 }
 
-function AddLeadModal({ stageId, contacts, onClose, onCreated }) {
+function AddLeadModal({ stageId, onClose, onCreated }) {
   const [form, setForm] = useState({
     company: "",
     title: "",
     lead_type: "new",
     source: "",
-    contact_id: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -225,7 +179,6 @@ function AddLeadModal({ stageId, contacts, onClose, onCreated }) {
         ...form,
         stage_id: stageId,
         status: "active",
-        contact_id: form.contact_id ? parseInt(form.contact_id) : null,
       });
       onCreated(res.data);
       onClose();
@@ -310,24 +263,6 @@ function AddLeadModal({ stageId, contacts, onClose, onCreated }) {
               </select>
             </div>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Contact (optional)
-            </label>
-            <select
-              className="input"
-              value={form.contact_id}
-              onChange={(e) => setForm({ ...form, contact_id: e.target.value })}
-            >
-              <option value="">— No contact —</option>
-              {contacts.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                  {c.company ? ` · ${c.company}` : ""}
-                </option>
-              ))}
-            </select>
-          </div>
         </div>
         <div className="flex gap-2 mt-5">
           <button className="btn-secondary flex-1" onClick={onClose}>
@@ -346,14 +281,12 @@ function AddLeadModal({ stageId, contacts, onClose, onCreated }) {
   );
 }
 
-// Unified lead panel — view (read-only roles) and edit (Owner/Sales), matching
-// the BRD's "Edit lead" concept: company/project info, status & pipeline
-// stage, products & services (locked until Quotation), and notes & updates.
-function LeadPanel({ leadId, stages, contacts, canManage, onClose, onUpdated, onDeleted }) {
+// The BRD's "Edit lead": company/project info, status & pipeline stage,
+// products & services (locked until Quotation), and notes & updates.
+function LeadPanel({ leadId, stages, onClose, onUpdated, onDeleted }) {
   const [lead, setLead] = useState(null);
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [featureError, setFeatureError] = useState(null);
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -362,7 +295,6 @@ function LeadPanel({ leadId, stages, contacts, canManage, onClose, onUpdated, on
   const [svcValue, setSvcValue] = useState("");
   const [svcSubmitting, setSvcSubmitting] = useState(false);
 
-  const [actType, setActType] = useState("note");
   const [actNote, setActNote] = useState("");
   const [actSubmitting, setActSubmitting] = useState(false);
   const [editingActivity, setEditingActivity] = useState(null);
@@ -370,7 +302,6 @@ function LeadPanel({ leadId, stages, contacts, canManage, onClose, onUpdated, on
 
   const [pendingStatus, setPendingStatus] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [showMore, setShowMore] = useState(false);
 
   useEffect(() => {
     Promise.all([getLead(leadId), getActivities(leadId)])
@@ -381,20 +312,9 @@ function LeadPanel({ leadId, stages, contacts, canManage, onClose, onUpdated, on
           title: lr.data.title || "",
           lead_type: lr.data.lead_type || "new",
           source: lr.data.source || "",
-          contact_id: lr.data.contact_id || "",
           stage_id: lr.data.stage_id,
-          value: lr.data.value || "",
-          notes: lr.data.notes || "",
         });
         setActivities(ar.data);
-      })
-      .catch((err) => {
-        if (err.response?.status === 403) {
-          setFeatureError(
-            err.response?.data?.message ||
-              "Lead detail page is not available on your plan",
-          );
-        }
       })
       .finally(() => setLoading(false));
   }, [leadId]);
@@ -408,19 +328,12 @@ function LeadPanel({ leadId, stages, contacts, canManage, onClose, onUpdated, on
     setSaving(true);
     setError("");
     try {
-      // Only send flat/foreign-key fields — never spread the loaded `lead`
-      // object, since it carries nested stage/owner/contact/services
-      // associations that would otherwise get bound onto the request and
-      // risk GORM upserting over those related rows.
       const res = await updateLead(lead.id, {
         company: form.company,
         title: form.title,
         lead_type: form.lead_type,
         source: form.source,
-        contact_id: form.contact_id ? parseInt(form.contact_id) : null,
         stage_id: parseInt(form.stage_id),
-        value: lead.services?.length ? lead.value : parseFloat(form.value) || 0,
-        notes: form.notes,
       });
       setLead(res.data);
       onUpdated(res.data);
@@ -473,7 +386,7 @@ function LeadPanel({ leadId, stages, contacts, canManage, onClose, onUpdated, on
     if (!actNote.trim()) return;
     setActSubmitting(true);
     try {
-      const res = await createActivity(leadId, { type: actType, note: actNote });
+      const res = await createActivity(leadId, actNote);
       setActivities((prev) => [res.data, ...prev]);
       setActNote("");
     } finally {
@@ -485,10 +398,7 @@ function LeadPanel({ leadId, stages, contacts, canManage, onClose, onUpdated, on
     if (!editingActivity.note.trim()) return;
     setActSubmitting(true);
     try {
-      const res = await updateActivity(leadId, activityId, {
-        type: editingActivity.type,
-        note: editingActivity.note,
-      });
+      const res = await updateActivity(leadId, activityId, editingActivity.note);
       setActivities((prev) => prev.map((a) => (a.id === activityId ? res.data : a)));
       setEditingActivity(null);
     } finally {
@@ -510,7 +420,7 @@ function LeadPanel({ leadId, stages, contacts, canManage, onClose, onUpdated, on
       <div className="w-full max-w-md bg-white dark:bg-gray-800 shadow-2xl flex flex-col border-l border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
           <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-            {canManage ? "Edit Lead" : "Lead Detail"}
+            Edit Lead
           </p>
           <button
             onClick={onClose}
@@ -523,10 +433,6 @@ function LeadPanel({ leadId, stages, contacts, canManage, onClose, onUpdated, on
         {loading ? (
           <div className="flex-1 flex items-center justify-center text-sm text-gray-400 dark:text-gray-500">
             Loading...
-          </div>
-        ) : featureError ? (
-          <div className="flex-1 flex items-center justify-center p-5 text-center">
-            <p className="text-sm text-gray-500 dark:text-gray-400">{featureError}</p>
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
@@ -549,7 +455,6 @@ function LeadPanel({ leadId, stages, contacts, canManage, onClose, onUpdated, on
                 <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Company</label>
                 <input
                   className="input"
-                  disabled={!canManage}
                   value={form.company}
                   onChange={(e) => setForm({ ...form, company: e.target.value })}
                 />
@@ -558,7 +463,6 @@ function LeadPanel({ leadId, stages, contacts, canManage, onClose, onUpdated, on
                 <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Project name</label>
                 <input
                   className="input"
-                  disabled={!canManage}
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
                 />
@@ -568,7 +472,6 @@ function LeadPanel({ leadId, stages, contacts, canManage, onClose, onUpdated, on
                   <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">New / Existing</label>
                   <select
                     className="input"
-                    disabled={!canManage}
                     value={form.lead_type}
                     onChange={(e) => setForm({ ...form, lead_type: e.target.value })}
                   >
@@ -580,7 +483,6 @@ function LeadPanel({ leadId, stages, contacts, canManage, onClose, onUpdated, on
                   <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Source of lead</label>
                   <select
                     className="input"
-                    disabled={!canManage}
                     value={form.source}
                     onChange={(e) => setForm({ ...form, source: e.target.value })}
                   >
@@ -603,7 +505,6 @@ function LeadPanel({ leadId, stages, contacts, canManage, onClose, onUpdated, on
                   <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Status</label>
                   <select
                     className="input"
-                    disabled={!canManage}
                     value={lead.status}
                     onChange={(e) => handleStatusChange(e.target.value)}
                   >
@@ -618,7 +519,6 @@ function LeadPanel({ leadId, stages, contacts, canManage, onClose, onUpdated, on
                   <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Pipeline stage</label>
                   <select
                     className="input"
-                    disabled={!canManage}
                     value={form.stage_id}
                     onChange={(e) => setForm({ ...form, stage_id: e.target.value })}
                   >
@@ -675,43 +575,39 @@ function LeadPanel({ leadId, stages, contacts, canManage, onClose, onUpdated, on
                             <span className="text-gray-500 dark:text-gray-400">
                               {formatIDR(svc.value) || "IDR 0"}
                             </span>
-                            {canManage && (
-                              <button
-                                onClick={() => handleRemoveService(svc.id)}
-                                className="text-gray-300 dark:text-gray-500 hover:text-red-400"
-                              >
-                                <Trash2 size={11} />
-                              </button>
-                            )}
+                            <button
+                              onClick={() => handleRemoveService(svc.id)}
+                              className="text-gray-300 dark:text-gray-500 hover:text-red-400"
+                            >
+                              <Trash2 size={11} />
+                            </button>
                           </div>
                         </div>
                       ))}
                     </div>
                   )}
-                  {canManage && (
-                    <div className="flex gap-1.5">
-                      <input
-                        className="input text-xs flex-1"
-                        placeholder="Service or product name"
-                        value={svcName}
-                        onChange={(e) => setSvcName(e.target.value)}
-                      />
-                      <input
-                        className="input text-xs w-24"
-                        type="number"
-                        placeholder="Value"
-                        value={svcValue}
-                        onChange={(e) => setSvcValue(e.target.value)}
-                      />
-                      <button
-                        className="btn-primary text-xs px-3"
-                        onClick={handleAddService}
-                        disabled={svcSubmitting || !svcName.trim()}
-                      >
-                        Add
-                      </button>
-                    </div>
-                  )}
+                  <div className="flex gap-1.5">
+                    <input
+                      className="input text-xs flex-1"
+                      placeholder="Service or product name"
+                      value={svcName}
+                      onChange={(e) => setSvcName(e.target.value)}
+                    />
+                    <input
+                      className="input text-xs w-24"
+                      type="number"
+                      placeholder="Value"
+                      value={svcValue}
+                      onChange={(e) => setSvcValue(e.target.value)}
+                    />
+                    <button
+                      className="btn-primary text-xs px-3"
+                      onClick={handleAddService}
+                      disabled={svcSubmitting || !svcName.trim()}
+                    >
+                      Add
+                    </button>
+                  </div>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-right">
                     Total deal value:{" "}
                     <span className="font-semibold text-gray-800 dark:text-gray-100">
@@ -722,73 +618,14 @@ function LeadPanel({ leadId, stages, contacts, canManage, onClose, onUpdated, on
               )}
             </div>
 
-            {/* More details */}
-            <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
-              <button
-                className="text-xs font-semibold text-gray-700 dark:text-gray-200"
-                onClick={() => setShowMore((v) => !v)}
-              >
-                {showMore ? "− Hide" : "+ More"} details (optional)
+            <div className="flex gap-2 border-t border-gray-100 dark:border-gray-700 pt-4">
+              <button className="btn-secondary flex-1" onClick={onClose}>
+                Cancel
               </button>
-              {showMore && (
-                <div className="space-y-3 mt-3">
-                  <div>
-                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Contact</label>
-                    <select
-                      className="input"
-                      disabled={!canManage}
-                      value={form.contact_id}
-                      onChange={(e) => setForm({ ...form, contact_id: e.target.value })}
-                    >
-                      <option value="">— No contact —</option>
-                      {contacts.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                          {c.company ? ` · ${c.company}` : ""}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  {!lead.services?.length && (
-                    <div>
-                      <label className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 mb-1">
-                        <DollarSign size={11} /> Deal value (manual, before Quotation)
-                      </label>
-                      <input
-                        className="input"
-                        type="number"
-                        disabled={!canManage}
-                        value={form.value}
-                        onChange={(e) => setForm({ ...form, value: e.target.value })}
-                      />
-                    </div>
-                  )}
-                  <div>
-                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-                      Internal notes
-                    </label>
-                    <textarea
-                      className="input resize-none"
-                      rows={3}
-                      disabled={!canManage}
-                      value={form.notes}
-                      onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                    />
-                  </div>
-                </div>
-              )}
+              <button className="btn-primary flex-1" onClick={handleSave} disabled={saving}>
+                {saving ? "Saving..." : "Save"}
+              </button>
             </div>
-
-            {canManage && (
-              <div className="flex gap-2 border-t border-gray-100 dark:border-gray-700 pt-4">
-                <button className="btn-secondary flex-1" onClick={onClose}>
-                  Cancel
-                </button>
-                <button className="btn-primary flex-1" onClick={handleSave} disabled={saving}>
-                  {saving ? "Saving..." : "Save"}
-                </button>
-              </div>
-            )}
 
             {/* Notes & updates */}
             <div className="border-t border-gray-100 dark:border-gray-700 pt-4 pb-4">
@@ -800,21 +637,6 @@ function LeadPanel({ leadId, stages, contacts, canManage, onClose, onUpdated, on
                   </span>
                 )}
               </p>
-              <div className="grid grid-cols-4 gap-1.5 mb-2">
-                {["note", "call", "email", "meeting"].map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setActType(t)}
-                    className={`text-[10px] font-medium py-1.5 rounded-lg capitalize transition-colors ${
-                      actType === t
-                        ? "bg-brand-600 text-white"
-                        : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
               <textarea
                 className="input resize-none w-full mb-2 text-xs"
                 rows={2}
@@ -837,56 +659,40 @@ function LeadPanel({ leadId, stages, contacts, canManage, onClose, onUpdated, on
               ) : (
                 <div className="space-y-3">
                   {activities.map((act) => {
-                    const Icon = ACT_ICONS[act.type] || FileText;
                     const isEditing = editingActivity?.id === act.id;
                     return (
                       <div
                         key={act.id}
-                        className={`group flex gap-3 ${isEditing ? "bg-gray-50 dark:bg-gray-700/50 p-3 rounded" : ""}`}
+                        className={`group ${isEditing ? "bg-gray-50 dark:bg-gray-700/50 p-3 rounded" : ""}`}
                       >
-                        <div className={`flex-shrink-0 mt-0.5 ${ACT_COLORS[act.type] || "text-gray-400"}`}>
-                          <Icon size={13} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          {isEditing ? (
-                            <div className="space-y-2">
-                              <select
-                                className="input text-xs"
-                                value={editingActivity.type}
-                                onChange={(e) =>
-                                  setEditingActivity({ ...editingActivity, type: e.target.value })
-                                }
+                        {isEditing ? (
+                          <div className="space-y-2">
+                            <textarea
+                              className="input text-xs"
+                              rows={2}
+                              value={editingActivity.note}
+                              onChange={(e) =>
+                                setEditingActivity({ ...editingActivity, note: e.target.value })
+                              }
+                            />
+                            <div className="flex gap-1">
+                              <button
+                                className="btn-secondary text-xs flex-1"
+                                onClick={() => setEditingActivity(null)}
                               >
-                                <option value="note">Note</option>
-                                <option value="call">Call</option>
-                                <option value="email">Email</option>
-                                <option value="meeting">Meeting</option>
-                              </select>
-                              <textarea
-                                className="input text-xs"
-                                rows={2}
-                                value={editingActivity.note}
-                                onChange={(e) =>
-                                  setEditingActivity({ ...editingActivity, note: e.target.value })
-                                }
-                              />
-                              <div className="flex gap-1">
-                                <button
-                                  className="btn-secondary text-xs flex-1"
-                                  onClick={() => setEditingActivity(null)}
-                                >
-                                  Cancel
-                                </button>
-                                <button
-                                  className="btn-primary text-xs flex-1"
-                                  onClick={() => handleUpdateActivity(act.id)}
-                                >
-                                  Save
-                                </button>
-                              </div>
+                                Cancel
+                              </button>
+                              <button
+                                className="btn-primary text-xs flex-1"
+                                onClick={() => handleUpdateActivity(act.id)}
+                              >
+                                Save
+                              </button>
                             </div>
-                          ) : (
-                            <>
+                          </div>
+                        ) : (
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
                               <p className="text-xs text-gray-800 dark:text-gray-200 leading-snug">{act.note}</p>
                               <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
                                 {act.created_by?.name} ·{" "}
@@ -896,23 +702,21 @@ function LeadPanel({ leadId, stages, contacts, canManage, onClose, onUpdated, on
                                   year: "numeric",
                                 })}
                               </p>
-                            </>
-                          )}
-                        </div>
-                        {canManage && !isEditing && (
-                          <div className="flex gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={() => setEditingActivity(act)}
-                              className="text-gray-400 dark:text-gray-500 hover:text-brand-500 transition-colors p-0.5"
-                            >
-                              <Pencil size={12} />
-                            </button>
-                            <button
-                              onClick={() => setConfirmDeleteActivityId(act.id)}
-                              className="text-gray-400 dark:text-gray-500 hover:text-red-400 transition-colors p-0.5"
-                            >
-                              <Trash2 size={12} />
-                            </button>
+                            </div>
+                            <div className="flex gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={() => setEditingActivity(act)}
+                                className="text-gray-400 dark:text-gray-500 hover:text-brand-500 transition-colors p-0.5"
+                              >
+                                <Pencil size={12} />
+                              </button>
+                              <button
+                                onClick={() => setConfirmDeleteActivityId(act.id)}
+                                className="text-gray-400 dark:text-gray-500 hover:text-red-400 transition-colors p-0.5"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -922,14 +726,12 @@ function LeadPanel({ leadId, stages, contacts, canManage, onClose, onUpdated, on
               )}
             </div>
 
-            {canManage && (
-              <button
-                className="text-xs text-red-500 hover:text-red-600 font-medium"
-                onClick={() => setConfirmDelete(true)}
-              >
-                Delete lead
-              </button>
-            )}
+            <button
+              className="text-xs text-red-500 hover:text-red-600 font-medium"
+              onClick={() => setConfirmDelete(true)}
+            >
+              Delete lead
+            </button>
           </div>
         )}
 
@@ -969,18 +771,11 @@ function LeadPanel({ leadId, stages, contacts, canManage, onClose, onUpdated, on
 }
 
 export default function Pipeline() {
-  const { user } = useAuth();
-  const canManage = canManageLeads(user?.role);
-  const heading =
-    user?.role === "sales" ? "My Pipeline" : canManage ? "Pipeline" : "Team Pipeline";
-
   const [leads, setLeads] = useState([]);
   const [stages, setStages] = useState([]);
-  const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [activeStage, setActiveStage] = useState(null);
-  const [pendingMove, setPendingMove] = useState(null);
   const [detailLeadId, setDetailLeadId] = useState(null);
   const [confirmId, setConfirmId] = useState(null);
 
@@ -989,11 +784,10 @@ export default function Pipeline() {
   const [statusFilter, setStatusFilter] = useState("active");
 
   useEffect(() => {
-    Promise.all([getLeads(), getStages(), getContacts()])
-      .then(([leadsRes, stagesRes, contactsRes]) => {
+    Promise.all([getLeads(), getStages()])
+      .then(([leadsRes, stagesRes]) => {
         setLeads(leadsRes.data);
         setStages(stagesRes.data);
-        setContacts(contactsRes.data);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -1016,32 +810,21 @@ export default function Pipeline() {
   const leadsByStage = (stageId) =>
     activeLeads.filter((l) => l.stage_id === stageId).filter((l) => matchesSearch(l, search));
 
-  const doMove = async (leadId, newStageId, closeReason, closeNote) => {
+  const doMove = async (leadId, newStageId) => {
     const prev = leads.find((l) => l.id === leadId)?.stage_id;
     setLeads((ls) => ls.map((l) => (l.id === leadId ? { ...l, stage_id: newStageId } : l)));
     try {
-      await moveLead(leadId, newStageId, closeReason, closeNote);
+      await moveLead(leadId, newStageId);
     } catch {
       setLeads((ls) => ls.map((l) => (l.id === leadId ? { ...l, stage_id: prev } : l)));
     }
   };
 
   const handleDragEnd = (result) => {
-    if (!canManage) return;
     const { draggableId, destination } = result;
     if (!destination) return;
     const leadId = parseInt(draggableId);
     const newStageId = parseInt(destination.droppableId);
-    const targetStage = stages.find((s) => s.id === newStageId);
-    if (targetStage?.name === "Won" || targetStage?.name === "Lost") {
-      setPendingMove({
-        leadId,
-        newStageId,
-        targetStage,
-        lead: leads.find((l) => l.id === leadId),
-      });
-      return;
-    }
     doMove(leadId, newStageId);
   };
 
@@ -1070,7 +853,7 @@ export default function Pipeline() {
     <div className="p-4 sm:p-8">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">{heading}</h1>
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">My Pipeline</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{leads.length} leads</p>
         </div>
         <div className="flex items-center gap-2">
@@ -1096,18 +879,16 @@ export default function Pipeline() {
               <ListIcon size={13} /> Table
             </button>
           </div>
-          {canManage && (
-            <button
-              className="btn-primary flex items-center gap-2"
-              onClick={() => {
-                setActiveStage(stages[0]?.id);
-                setShowModal(true);
-              }}
-            >
-              <Plus size={14} /> <span className="hidden sm:inline">Add lead</span>
-              <span className="sm:hidden">Add</span>
-            </button>
-          )}
+          <button
+            className="btn-primary flex items-center gap-2"
+            onClick={() => {
+              setActiveStage(stages[0]?.id);
+              setShowModal(true);
+            }}
+          >
+            <Plus size={14} /> <span className="hidden sm:inline">Add lead</span>
+            <span className="sm:hidden">Add</span>
+          </button>
         </div>
       </div>
 
@@ -1170,17 +951,15 @@ export default function Pipeline() {
                         {stageLeads.length}
                       </span>
                     </div>
-                    {canManage && (
-                      <button
-                        className="text-gray-400 dark:text-gray-500 hover:text-brand-600 transition-colors"
-                        onClick={() => {
-                          setActiveStage(stage.id);
-                          setShowModal(true);
-                        }}
-                      >
-                        <Plus size={14} />
-                      </button>
-                    )}
+                    <button
+                      className="text-gray-400 dark:text-gray-500 hover:text-brand-600 transition-colors"
+                      onClick={() => {
+                        setActiveStage(stage.id);
+                        setShowModal(true);
+                      }}
+                    >
+                      <Plus size={14} />
+                    </button>
                   </div>
                   {stageValue > 0 && (
                     <p className="text-xs text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-1">
@@ -1188,7 +967,7 @@ export default function Pipeline() {
                       {formatIDR(stageValue)}
                     </p>
                   )}
-                  <Droppable droppableId={String(stage.id)} isDropDisabled={!canManage}>
+                  <Droppable droppableId={String(stage.id)}>
                     {(provided, snapshot) => (
                       <div
                         ref={provided.innerRef}
@@ -1200,12 +979,7 @@ export default function Pipeline() {
                         }`}
                       >
                         {stageLeads.map((lead, index) => (
-                          <Draggable
-                            key={lead.id}
-                            draggableId={String(lead.id)}
-                            index={index}
-                            isDragDisabled={!canManage}
-                          >
+                          <Draggable key={lead.id} draggableId={String(lead.id)} index={index}>
                             {(provided, snapshot) => (
                               <div
                                 ref={provided.innerRef}
@@ -1229,20 +1003,15 @@ export default function Pipeline() {
                                       {lead.title}
                                     </p>
                                   </div>
-                                  <div className="flex items-center gap-1 flex-shrink-0 mt-0.5">
-                                    <AgingBadge lead={lead} />
-                                    {canManage && (
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setConfirmId(lead.id);
-                                        }}
-                                        className="text-gray-300 dark:text-gray-500 hover:text-red-400 transition-colors"
-                                      >
-                                        <Trash2 size={12} />
-                                      </button>
-                                    )}
-                                  </div>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setConfirmId(lead.id);
+                                    }}
+                                    className="text-gray-300 dark:text-gray-500 hover:text-red-400 transition-colors flex-shrink-0 mt-0.5"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
                                 </div>
                                 {lead.value > 0 && (
                                   <p className="text-gray-400 dark:text-gray-400 mt-1.5 flex items-center gap-1">
@@ -1331,29 +1100,14 @@ export default function Pipeline() {
       {showModal && (
         <AddLeadModal
           stageId={activeStage}
-          contacts={contacts}
           onClose={() => setShowModal(false)}
           onCreated={handleCreated}
-        />
-      )}
-      {pendingMove && (
-        <CloseReasonModal
-          label={pendingMove.targetStage?.name}
-          isWon={pendingMove.targetStage?.name === "Won"}
-          onConfirm={(reason, note) => {
-            const { leadId, newStageId } = pendingMove;
-            setPendingMove(null);
-            doMove(leadId, newStageId, reason, note);
-          }}
-          onCancel={() => setPendingMove(null)}
         />
       )}
       {detailLeadId && (
         <LeadPanel
           leadId={detailLeadId}
           stages={stages}
-          contacts={contacts}
-          canManage={canManage}
           onClose={() => setDetailLeadId(null)}
           onUpdated={handleUpdated}
           onDeleted={handleDeletedFromPanel}

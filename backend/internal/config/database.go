@@ -27,13 +27,10 @@ func NewDB(cfg *Config) (*gorm.DB, error) {
 		&model.Tenant{},
 		&model.Team{},
 		&model.User{},
-		&model.Contact{},
 		&model.Stage{},
 		&model.Lead{},
 		&model.LeadService{},
 		&model.Activity{},
-		&model.Task{},
-		&model.Notification{},
 	); err != nil {
 		return nil, err
 	}

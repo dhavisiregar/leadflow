@@ -10,24 +10,18 @@ import (
 )
 
 type Config struct {
-	AppPort            string
-	AppEnv             string
-	DBHost             string
-	DBPort             string
-	DBUser             string
-	DBPassword         string
-	DBName             string
-	JWTSecret          string
-	JWTExpiresHours    int
-	MidtransServerKey  string
-	MidtransClientKey  string
-	MidtransProduction bool
-	ResendAPIKey       string
-	AlertFromEmail     string
-	AllowedOrigins     []string
-	DBSSLMode          string
-	GoogleClientID     string
-	FrontendURL        string
+	AppPort         string
+	AppEnv          string
+	DBHost          string
+	DBPort          string
+	DBUser          string
+	DBPassword      string
+	DBName          string
+	JWTSecret       string
+	JWTExpiresHours int
+	AllowedOrigins  []string
+	DBSSLMode       string
+	GoogleClientID  string
 }
 
 func Load() (*Config, error) {
@@ -37,24 +31,18 @@ func Load() (*Config, error) {
 	expiresHours, _ := strconv.Atoi(getEnv("JWT_EXPIRES_HOURS", "72"))
 
 	cfg := &Config{
-		AppPort:            getEnv("APP_PORT", getEnv("PORT", "8080")),
-		AppEnv:             getEnv("APP_ENV", "development"),
-		DBHost:             getEnv("DB_HOST", "localhost"),
-		DBPort:             getEnv("DB_PORT", "5432"),
-		DBUser:             getEnv("DB_USER", "postgres"),
-		DBPassword:         getEnv("DB_PASSWORD", ""),
-		DBName:             getEnv("DB_NAME", "leadflow"),
-		JWTSecret:          getEnv("JWT_SECRET", ""),
-		JWTExpiresHours:    expiresHours,
-		MidtransServerKey:  getEnv("MIDTRANS_SERVER_KEY", ""),
-		MidtransClientKey:  getEnv("MIDTRANS_CLIENT_KEY", ""),
-		MidtransProduction: getEnv("MIDTRANS_ENV", "sandbox") == "production",
-		ResendAPIKey:       getEnv("RESEND_API_KEY", ""),
-		AlertFromEmail:     getEnv("ALERT_FROM_EMAIL", "alerts@leadflow.dev"),
-		AllowedOrigins:     strings.Split(getEnv("ALLOWED_ORIGINS", "http://localhost:5173"), ","),
-		DBSSLMode:          getEnv("DB_SSLMODE", "disable"),
-		GoogleClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
-		FrontendURL:        getEnv("FRONTEND_URL", "http://localhost:5173"),
+		AppPort:         getEnv("APP_PORT", getEnv("PORT", "8080")),
+		AppEnv:          getEnv("APP_ENV", "development"),
+		DBHost:          getEnv("DB_HOST", "localhost"),
+		DBPort:          getEnv("DB_PORT", "5432"),
+		DBUser:          getEnv("DB_USER", "postgres"),
+		DBPassword:      getEnv("DB_PASSWORD", ""),
+		DBName:          getEnv("DB_NAME", "leadflow"),
+		JWTSecret:       getEnv("JWT_SECRET", ""),
+		JWTExpiresHours: expiresHours,
+		AllowedOrigins:  strings.Split(getEnv("ALLOWED_ORIGINS", "http://localhost:5173"), ","),
+		DBSSLMode:       getEnv("DB_SSLMODE", "disable"),
+		GoogleClientID:  getEnv("GOOGLE_CLIENT_ID", ""),
 	}
 
 	if cfg.JWTSecret == "" {
@@ -65,8 +53,10 @@ func Load() (*Config, error) {
 }
 
 func (c *Config) DSN() string {
+	// password is quoted: an empty, unquoted value in this keyword/value DSN
+	// format gets misparsed by libpq, silently dropping every key after it.
 	return fmt.Sprintf(
-		"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s TimeZone=Asia/Jakarta",
+		"host=%s user=%s password='%s' dbname=%s port=%s sslmode=%s TimeZone=Asia/Jakarta",
 		c.DBHost, c.DBUser, c.DBPassword, c.DBName, c.DBPort, c.DBSSLMode,
 	)
 }

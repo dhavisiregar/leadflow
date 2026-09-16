@@ -1,34 +1,23 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
 import {
-  LayoutDashboard, Kanban, Users, LogOut, Zap, CreditCard,
-  CheckSquare, BarChart2, Menu, X, Sun, Moon, UsersRound,
+  LayoutDashboard, Kanban, LogOut, Zap,
+  Menu, X, Sun, Moon, UsersRound,
 } from 'lucide-react'
-import { getPlan } from '../../api'
-import GlobalSearch from './GlobalSearch'
-import NotificationBell from './NotificationBell'
 
-const PIPELINE_LABELS = {
+const HOME_LABELS = {
   sales: 'My Pipeline',
   owner: 'Pipeline',
 }
 
 function navFor(role) {
   return [
-    { to: '/', icon: LayoutDashboard, label: 'Dashboard', end: true },
-    { to: '/pipeline', icon: Kanban, label: PIPELINE_LABELS[role] || 'Team Pipeline' },
-    ...(['owner', 'unit_head', 'manager', 'data_analyst'].includes(role)
-      ? [{ to: '/analytics', icon: BarChart2, label: 'Analytics' }]
-      : []),
-    { to: '/tasks', icon: CheckSquare, label: 'Tasks' },
-    { to: '/contacts', icon: Users, label: 'Contacts' },
-    { to: '/reports', icon: BarChart2, label: 'Reports' },
+    { to: '/', icon: role === 'sales' || role === 'owner' ? Kanban : LayoutDashboard, label: HOME_LABELS[role] || 'Dashboard', end: true },
     ...(role === 'owner'
       ? [{ to: '/team-members', icon: UsersRound, label: 'Team Members' }]
       : []),
-    { to: '/billing', icon: CreditCard, label: 'Billing' },
   ]
 }
 
@@ -36,13 +25,8 @@ export default function Layout() {
   const { user, signOut } = useAuth()
   const { dark, toggle } = useTheme()
   const navigate = useNavigate()
-  const [planData, setPlanData] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const nav = navFor(user?.role)
-
-  useEffect(() => {
-    getPlan().then(res => setPlanData(res.data)).catch(() => {})
-  }, [])
 
   const handleSignOut = () => {
     signOut()
@@ -106,24 +90,8 @@ export default function Layout() {
           ))}
         </nav>
 
-        {/* Plan usage + user */}
-        <div className="px-3 py-3 border-t border-gray-100 dark:border-gray-800 space-y-2 flex-shrink-0">
-          {planData && planData.limits?.MaxLeads > 0 && (
-            <div className="px-3">
-              <div className="flex justify-between text-[10px] text-gray-400 dark:text-gray-500 mb-1">
-                <span>Leads</span>
-                <span>{planData.leads_count}/{planData.limits.MaxLeads}</span>
-              </div>
-              <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1">
-                <div
-                  className={`h-1 rounded-full ${
-                    (planData.leads_count / planData.limits.MaxLeads) >= 0.9 ? 'bg-red-400' : 'bg-brand-500'
-                  }`}
-                  style={{ width: `${Math.min((planData.leads_count / planData.limits.MaxLeads) * 100, 100)}%` }}
-                />
-              </div>
-            </div>
-          )}
+        {/* User */}
+        <div className="px-3 py-3 border-t border-gray-100 dark:border-gray-800 flex-shrink-0">
           <div className="flex items-center gap-2 px-3 py-1.5">
             <div className="w-7 h-7 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-brand-700 dark:text-brand-400 text-xs font-bold flex-shrink-0">
               {user?.name?.[0]?.toUpperCase()}
@@ -131,7 +99,7 @@ export default function Layout() {
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-gray-900 dark:text-white truncate">{user?.name}</p>
               <p className="text-[10px] text-gray-400 dark:text-gray-500 capitalize truncate">
-                {planData?.plan || user?.tenant?.plan || 'free'} plan
+                {(user?.role || '').replace('_', ' ')}
               </p>
             </div>
             <button
@@ -174,14 +142,6 @@ export default function Layout() {
             {dark ? <Sun size={16} /> : <Moon size={16} />}
           </button>
         </header>
-
-        {/* Topbar — global search + notifications */}
-        <div className="flex items-center gap-3 px-4 sm:px-6 py-2.5 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
-          <GlobalSearch />
-          <div className="ml-auto flex-shrink-0">
-            <NotificationBell />
-          </div>
-        </div>
 
         {/* Page content */}
         <main className="flex-1 overflow-auto min-w-0">

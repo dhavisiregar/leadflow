@@ -57,21 +57,6 @@ func (h *TeamMemberHandler) Create(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid role")
 	}
 
-	var tenant model.Tenant
-	if err := h.DB.First(&tenant, tenantID).Error; err != nil {
-		return echo.NewHTTPError(http.StatusNotFound, "tenant not found")
-	}
-	var currentCount int64
-	h.DB.Model(&model.User{}).Where("tenant_id = ?", tenantID).Count(&currentCount)
-	if !tenant.CanAddUser(int(currentCount)) {
-		l := model.Limits[tenant.Plan]
-		return echo.NewHTTPError(http.StatusPaymentRequired, map[string]interface{}{
-			"message": "user limit reached. Please upgrade.",
-			"limit":   l.MaxUsers,
-			"plan":    tenant.Plan,
-		})
-	}
-
 	var existing model.User
 	if err := h.DB.Where("email = ?", req.Email).First(&existing).Error; err == nil {
 		return echo.NewHTTPError(http.StatusConflict, "email already registered")

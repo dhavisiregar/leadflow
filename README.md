@@ -1,71 +1,70 @@
-# LeadFlow CRM
+# LeadFlow — Sales Pipeline Tracker
 
-A full-stack CRM application for managing leads, contacts, tasks, and sales pipelines with real-time collaboration features.
+A sales pipeline tracker built to a Business Requirements Document (BRD): a 6-stage pipeline, role-based access for Sales/Unit Head/Manager/Data Analyst, and read-only analytics dashboards for the managerial roles.
 
 ## Features
 
-### Pipeline Management
+### My Pipeline (Sales)
 
-- 📌 **Kanban Board** — Drag & drop leads across pipeline stages
-- 🎯 **Lead Scoring** — Aging badges (green/yellow/red) based on last activity
-- 💰 **Deal Values** — Track opportunity values and stage totals
-- 📝 **Lead Details** — Comprehensive lead view with activities, notes, and contact info
+- 📌 **Kanban Board & Table view** — Board shows only Active leads per stage; Table supports every status (Active/On Hold/Won/Lost)
+- ➕ **Quick lead creation** — Company, Project name, New/Existing, Source of lead; status defaults to Active, stage defaults to Initial Meeting
+- 💰 **Products & Services** — Deal value is always the sum of a lead's service line items; the section unlocks once a lead reaches the Quotation stage
+- 📝 **Notes & updates** — Timestamped, permanent activity history on every lead
+- 🔍 **Search & filter** — By company/project/service name, and by status
+- Sales only ever sees and manages their own leads — enforced both in the UI and on every API route
 
-### Task Management
+### Dashboard (Unit Head / Manager / Data Analyst)
 
-- ✅ **Smart Tasks** — Priority levels (high/medium/low), due dates, overdue highlighting
-- 🏷️ **Filter Tabs** — All/Today/Overdue/Completed tasks with count badges
-- 👥 **Group by Lead** — Organize tasks by associated leads
-- ⚡ **Quick Add** — Inline task creation and editing
+- 📊 **Read-only analytics** — active lead count, active deal value, won value, lost count
+- 👥 **Breakdown by sales rep and by team**
+- 🎚️ **Filters** — sales rep, team, status, date range
+- Scope is enforced server-side per role: Unit Head sees their team, Manager sees every team they oversee, Data Analyst sees the whole tenant — none of them can create or edit a lead
 
-### Contacts & Activities
+### Team Members (Owner)
 
-- 👤 **Contact Management** — Store and organize contact information
-- 📞 **Activity Logging** — Track calls, emails, meetings, and notes
-- ✏️ **Activity Edit/Delete** — Update or remove logged activities with confirmation
-- 👁️ **Activity History** — Complete audit trail with creator and timestamps
-
-### Reports & Analytics
-
-- 📊 **Pipeline Analytics** — Visual breakdown of leads by stage and value
-- 📈 **Deal Progress** — Track conversion rates and pipeline health
-- 💹 **Revenue Forecast** — Estimate revenue based on deal values
-
-### Subscription & Billing
-
-- 💳 **Flexible Plans** — Free/Starter/Pro/Team with different features
-- 🔐 **Secure Payments** — Midtrans payment gateway integration
-- 📊 **Usage Tracking** — Real-time lead count and plan limits
+- Create Sales / Unit Head / Manager / Data Analyst accounts directly
+- Group Sales reps into Teams, each with one Unit Head and one Manager
 
 ### User Experience
 
-- 🌙 **Dark Mode** — Full dark/light theme support with system preference detection
-- 📱 **Responsive Design** — Works seamlessly on desktop, tablet, and mobile
-- ⌨️ **Keyboard Navigation** — Escape to cancel, Enter to submit
-- 🎨 **Modern UI** — Tailwind CSS with smooth animations and transitions
-- 🔑 **Continue with Google** — Sign in with Google Identity Services; first-time users are auto-provisioned a tenant/owner account
+- 🌙 **Dark mode** — full dark/light theme support with system preference detection
+- 📱 **Responsive design**
+- 🔑 **Continue with Google** — sign in with Google Identity Services; first-time users are auto-provisioned a tenant/owner account
+
+## User Roles
+
+| Role | Access |
+|---|---|
+| **Sales** | Create/manage their own leads, add notes, search/filter their own pipeline. Cannot see other reps' leads or the Dashboard. |
+| **Unit Head** | Read-only Dashboard scoped to the Sales reps on their team. |
+| **Manager** | Read-only Dashboard scoped to every team they oversee. |
+| **Data Analyst** | Read-only Dashboard across the whole tenant. |
+| **Owner** | Full access to Pipeline (all leads) plus Team Members administration. Bootstraps the account via Register. |
+
+## Pipeline Stages
+
+`Initial Meeting → Requirement, Assessment, POC → Quotation → Negotiation → PO → Invoiced`
+
+A lead's **Status** (Active / On Hold / Won / Lost) is tracked separately from its stage. Marking a lead Won or Lost requires a reason and removes it from the Board (it stays visible, and editable, in the Table view).
 
 ## Tech Stack
 
 ### Backend
 
-- **Language**: Go 1.23
+- **Language**: Go
 - **Framework**: Echo v4
 - **Database**: PostgreSQL
 - **ORM**: GORM
 - **Authentication**: JWT (multi-tenant), Google Identity Services (ID token verified against Google's JWKS)
-- **Email**: Resend API
-- **Payments**: Midtrans (sandbox/production)
 
 ### Frontend
 
-- **Library**: React 18
+- **Library**: React
 - **Build Tool**: Vite
 - **Styling**: Tailwind CSS
 - **UI Components**: Lucide Icons
 - **HTTP Client**: Axios
 - **Drag & Drop**: @hello-pangea/dnd
-- **Charts**: Recharts
 - **Router**: React Router v6
 
 ## Getting Started
@@ -115,11 +114,6 @@ DB_SSLMODE=disable
 JWT_SECRET=your-random-secret-key
 JWT_EXPIRES_HOURS=72
 GOOGLE_CLIENT_ID=your-google-oauth-client-id
-MIDTRANS_SERVER_KEY=your-midtrans-key
-MIDTRANS_CLIENT_KEY=your-midtrans-client-key
-MIDTRANS_ENV=sandbox
-RESEND_API_KEY=your-resend-api-key
-ALERT_FROM_EMAIL=alerts@yourdomain.com
 ALLOWED_ORIGINS=http://localhost:5173
 ```
 
@@ -137,19 +131,18 @@ leadflow/
 ├── backend/
 │   ├── cmd/server/          # Application entry point
 │   ├── internal/
-│   │   ├── config/          # Configuration management
+│   │   ├── config/          # Env vars, DB connection, BRD stage-migration
 │   │   ├── handler/         # HTTP request handlers
-│   │   ├── middleware/      # JWT auth, logging
-│   │   ├── model/           # Database models
-│   │   └── job/             # Background jobs (stale lead alerts)
+│   │   ├── middleware/      # JWT auth, tenant scoping, role-based lead scoping
+│   │   └── model/           # Database models
 │   └── Dockerfile           # Docker build config
 │
 └── frontend/
     ├── src/
     │   ├── api/             # API client functions
-    │   ├── components/      # Reusable components (ConfirmModal, UpgradePrompt)
+    │   ├── components/      # Reusable components (ConfirmModal)
     │   ├── context/         # React Context (Auth, Theme)
-    │   ├── pages/           # Route pages (Pipeline, Tasks, Contacts, etc)
+    │   ├── pages/            # Pipeline, Analytics (Dashboard), TeamMembers, Login, Register
     │   └── index.css        # Global styles & Tailwind
     └── vite.config.js       # Vite configuration
 ```
@@ -158,45 +151,38 @@ leadflow/
 
 ### Authentication
 
-- `POST /auth/register` — Register new account
+- `POST /auth/register` — Register new account (creates tenant + Owner)
 - `POST /auth/login` — Login and get JWT token
 - `POST /auth/google` — Sign in with a Google ID token (auto-provisions a tenant/owner account for first-time users)
 - `GET /auth/me` — Get current user profile
 
 ### Leads
 
-- `GET /leads` — List leads (with filters)
-- `POST /leads` — Create lead
-- `PUT /leads/:id` — Update lead
-- `DELETE /leads/:id` — Delete lead
-- `PATCH /leads/:id/stage` — Move lead to different stage
+- `GET /leads` — List leads, scoped to the caller's role
+- `POST /leads` — Create lead (Owner/Sales)
+- `GET /leads/:id` — Get a single lead
+- `PUT /leads/:id` — Update lead (Owner/Sales)
+- `DELETE /leads/:id` — Delete lead (Owner/Sales)
+- `PATCH /leads/:id/stage` — Move a lead to a different pipeline stage
+- `PATCH /leads/:id/status` — Change Active/On Hold/Won/Lost (reason required for Won/Lost)
+- `POST /leads/:id/services` — Add a product/service line item (recomputes deal value)
+- `DELETE /leads/:id/services/:service_id` — Remove a line item
 
-### Activities
+### Notes & Updates
 
-- `GET /leads/:id/activities` — List activities for a lead
-- `POST /leads/:id/activities` — Log activity
-- `PUT /leads/:id/activities/:activity_id` — Update activity
-- `DELETE /leads/:id/activities/:activity_id` — Delete activity
+- `GET /leads/:id/activities` — List a lead's notes
+- `POST /leads/:id/activities` — Add a note
+- `PUT /leads/:id/activities/:activity_id` — Edit a note (author only)
+- `DELETE /leads/:id/activities/:activity_id` — Delete a note (author only)
 
-### Tasks
+### Teams & Team Members (Owner only)
 
-- `GET /tasks` — List tasks (with filters: today, overdue, completed)
-- `POST /tasks` — Create task
-- `PUT /tasks/:id` — Update task
-- `PATCH /tasks/:id/complete` — Mark task as complete
-- `DELETE /tasks/:id` — Delete task
+- `GET/POST /teams`, `PUT/DELETE /teams/:id` — Manage teams (Unit Head + Manager + Sales members)
+- `GET/POST /team-members`, `PUT/DELETE /team-members/:id` — Manage user accounts and roles
 
-### Contacts
+### Dashboard
 
-- `GET /contacts` — List contacts
-- `POST /contacts` — Create contact
-- `PUT /contacts/:id` — Update contact
-- `DELETE /contacts/:id` — Delete contact
-
-### Reports & Dashboard
-
-- `GET /dashboard/stats` — Get dashboard statistics
-- `GET /reports/summary` — Get reports summary (configurable time range)
+- `GET /dashboard/analytics` — Role-scoped analytics with `sales_id`, `team_id`, `status`, `date_from`, `date_to` filters
 
 ## Deployment
 

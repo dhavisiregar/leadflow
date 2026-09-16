@@ -80,17 +80,6 @@ func TenantScope(db *gorm.DB) echo.MiddlewareFunc {
 	}
 }
 
-// RequireOwner restricts a route to tenant owners only.
-func RequireOwner(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		role := c.Get("role").(model.Role)
-		if role != model.RoleOwner {
-			return echo.NewHTTPError(http.StatusForbidden, "owner access required")
-		}
-		return next(c)
-	}
-}
-
 // RequireRole restricts a route to one of the given roles.
 func RequireRole(roles ...model.Role) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
@@ -108,13 +97,13 @@ func RequireRole(roles ...model.Role) echo.MiddlewareFunc {
 
 // ScopeLeadsByRole narrows a leads query to what the given role/user is
 // allowed to see, per the BRD's org hierarchy:
-//   - sales / member: only their own leads
+//   - sales: only their own leads
 //   - unit_head: leads owned by Sales reps on the team they lead
 //   - manager: leads owned by Sales/Unit Head users on teams they manage
 //   - data_analyst / owner: no restriction (full tenant)
 func ScopeLeadsByRole(db *gorm.DB, role model.Role, userID uint) *gorm.DB {
 	switch role {
-	case model.RoleSales, model.RoleMember:
+	case model.RoleSales:
 		return db.Where("leads.owner_id = ?", userID)
 	case model.RoleUnitHead:
 		return db.Where(

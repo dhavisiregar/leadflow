@@ -25,7 +25,7 @@ type AuthHandler struct {
 // pipeline stages within an existing transaction. Shared by Register and
 // GoogleLogin, which both need to bootstrap a brand-new account.
 func seedTenantAndOwner(tx *gorm.DB, tenantName, slug, userName, email, hashedPassword string) (model.User, error) {
-	tenant := model.Tenant{Name: tenantName, Slug: slug, Plan: model.PlanFree}
+	tenant := model.Tenant{Name: tenantName, Slug: slug}
 	if err := tx.Create(&tenant).Error; err != nil {
 		return model.User{}, echo.NewHTTPError(http.StatusInternalServerError, "failed to create tenant")
 	}

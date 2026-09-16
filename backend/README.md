@@ -40,7 +40,11 @@ go mod tidy
 go run ./cmd/server
 ```
 
-GORM auto-migrates all tables on startup, then a one-time, idempotent migration seeds/upgrades every tenant's pipeline to the BRD's 6 stages (`internal/config/migrate_brd.go`) — safe to run against an existing database, it never drops leads.
+Startup runs three migration steps, all safe against an existing production database with real data:
+
+1. A NULL-backfill pass (`internal/config/database.go`) so a required column added after leads already existed (e.g. `company`) doesn't fail `AutoMigrate` with a `NOT NULL` violation.
+2. GORM's `AutoMigrate` for the current schema.
+3. A one-time, idempotent migration that seeds/upgrades every tenant's pipeline to the BRD's 6 stages (`internal/config/migrate_brd.go`) — it never drops leads.
 
 ### 5. Test the API
 
@@ -76,7 +80,7 @@ backend/
 ├── internal/
 │   ├── config/
 │   │   ├── config.go           # Env vars loader
-│   │   ├── database.go         # GORM connection + AutoMigrate
+│   │   ├── database.go         # GORM connection, NULL-backfill safety net, AutoMigrate
 │   │   └── migrate_brd.go      # One-time BRD stage-set migration
 │   ├── handler/
 │   │   ├── auth.go             # /auth/register, /auth/login, /auth/google, /auth/me

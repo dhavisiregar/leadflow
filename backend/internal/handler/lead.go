@@ -88,6 +88,11 @@ func (h *LeadHandler) Create(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to create lead")
 	}
 
+	// Populate Stage/Owner so the response matches what List/Get return —
+	// otherwise a just-created lead renders with a blank stage until the
+	// next full page load.
+	h.DB.Preload("Stage").Preload("Owner").First(&lead, lead.ID)
+
 	return c.JSON(http.StatusCreated, lead)
 }
 

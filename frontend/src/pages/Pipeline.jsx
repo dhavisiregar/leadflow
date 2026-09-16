@@ -19,15 +19,15 @@ import {
 import {
   Plus,
   Trash2,
-  DollarSign,
   X,
-  User as UserIcon,
   Kanban,
   List as ListIcon,
   Search,
   Pencil,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import ConfirmModal from "../components/ConfirmModal";
+import { useAuth } from "../context/AuthContext";
 
 const CLOSE_REASONS = [
   "Price",
@@ -85,7 +85,7 @@ function formatIDR(val) {
 
 function StatCard({ label, value, tone }) {
   return (
-    <div className="card px-4 py-3">
+    <div className="px-4 py-3">
       <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">{label}</p>
       <p className={`text-lg font-semibold ${tone || "text-gray-900 dark:text-white"}`}>
         {value}
@@ -418,16 +418,19 @@ function LeadPanel({ leadId, stages, onClose, onUpdated, onDeleted }) {
     <div className="fixed inset-0 z-40 flex justify-end">
       <div className="flex-1 bg-black/20" onClick={onClose} />
       <div className="w-full max-w-md bg-white dark:bg-gray-800 shadow-2xl flex flex-col border-l border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
-          <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-            Edit Lead
-          </p>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
-          >
-            <X size={16} />
-          </button>
+        <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Edit lead</h2>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+            >
+              <X size={16} />
+            </button>
+          </div>
+          {lead?.owner?.name && (
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Owner: {lead.owner.name}</p>
+          )}
         </div>
 
         {loading ? (
@@ -440,12 +443,6 @@ function LeadPanel({ leadId, stages, onClose, onUpdated, onDeleted }) {
               <div className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded px-3 py-2">
                 {error}
               </div>
-            )}
-
-            {lead.owner?.name && (
-              <p className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1.5">
-                <UserIcon size={12} /> Owner: {lead.owner.name}
-              </p>
             )}
 
             {/* Lead info */}
@@ -771,13 +768,15 @@ function LeadPanel({ leadId, stages, onClose, onUpdated, onDeleted }) {
 }
 
 export default function Pipeline() {
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
   const [leads, setLeads] = useState([]);
   const [stages, setStages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [activeStage, setActiveStage] = useState(null);
   const [detailLeadId, setDetailLeadId] = useState(null);
-  const [confirmId, setConfirmId] = useState(null);
 
   const [view, setView] = useState("board");
   const [search, setSearch] = useState("");
@@ -828,21 +827,28 @@ export default function Pipeline() {
     doMove(leadId, newStageId);
   };
 
-  const handleDelete = async (leadId) => {
-    setLeads((prev) => prev.filter((l) => l.id !== leadId));
-    setConfirmId(null);
-    try {
-      await deleteLead(leadId);
-    } catch (err) {
-      console.error("Failed to delete lead", err);
-    }
-  };
-
   const handleCreated = (lead) => setLeads((prev) => [...prev, lead]);
   const handleUpdated = (lead) =>
     setLeads((prev) => prev.map((l) => (l.id === lead.id ? lead : l)));
   const handleDeletedFromPanel = (leadId) =>
     setLeads((prev) => prev.filter((l) => l.id !== leadId));
+
+  const handleSignOut = () => {
+    signOut();
+    navigate("/login");
+  };
+
+  const handleLoadDemoData = async () => {
+    const demo = [
+      { company: "PT Sinar Jaya", title: "Company website redesign", lead_type: "new", source: "Referral", stage_id: stages[0]?.id },
+      { company: "CV Makmur Abadi", title: "Internal HR system", lead_type: "existing", source: "Website", stage_id: stages[1]?.id || stages[0]?.id },
+    ];
+    for (const d of demo) {
+      if (!d.stage_id) continue;
+      const res = await createLead({ ...d, status: "active" });
+      handleCreated(res.data);
+    }
+  };
 
   if (loading)
     return (
@@ -851,52 +857,66 @@ export default function Pipeline() {
 
   return (
     <div className="p-4 sm:p-8">
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div>
           <h1 className="text-xl font-semibold text-gray-900 dark:text-white">My Pipeline</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{leads.length} leads</p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <button
-              onClick={() => setView("board")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
-                view === "board"
-                  ? "bg-brand-600 text-white"
-                  : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300"
-              }`}
-            >
-              <Kanban size={13} /> Board
+        <div className="flex flex-col items-end gap-2">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            <span className="font-medium text-gray-700 dark:text-gray-200">{user?.name}</span>
+            <span className="mx-1">·</span>
+            <span className="capitalize">{(user?.role || "").replace("_", " ")}</span>
+            <span className="mx-1">·</span>
+            <button onClick={handleSignOut} className="underline hover:text-brand-600">
+              not you?
+            </button>
+          </p>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <button
+                onClick={() => setView("board")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
+                  view === "board"
+                    ? "bg-brand-600 text-white"
+                    : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300"
+                }`}
+              >
+                <Kanban size={13} /> Board
+              </button>
+              <button
+                onClick={() => setView("table")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
+                  view === "table"
+                    ? "bg-brand-600 text-white"
+                    : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300"
+                }`}
+              >
+                <ListIcon size={13} /> Table
+              </button>
+            </div>
+            <button className="btn-secondary" onClick={handleLoadDemoData}>
+              Load demo data
             </button>
             <button
-              onClick={() => setView("table")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
-                view === "table"
-                  ? "bg-brand-600 text-white"
-                  : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300"
-              }`}
+              className="btn-primary flex items-center gap-2"
+              onClick={() => {
+                setActiveStage(stages[0]?.id);
+                setShowModal(true);
+              }}
             >
-              <ListIcon size={13} /> Table
+              <Plus size={14} /> <span className="hidden sm:inline">Add lead</span>
+              <span className="sm:hidden">Add</span>
             </button>
           </div>
-          <button
-            className="btn-primary flex items-center gap-2"
-            onClick={() => {
-              setActiveStage(stages[0]?.id);
-              setShowModal(true);
-            }}
-          >
-            <Plus size={14} /> <span className="hidden sm:inline">Add lead</span>
-            <span className="sm:hidden">Add</span>
-          </button>
         </div>
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      <div className="card grid grid-cols-2 lg:grid-cols-4 divide-x divide-gray-100 dark:divide-gray-700 mb-6">
         <StatCard label="Active leads" value={activeLeads.length} />
-        <StatCard label="Active deal value" value={formatIDR(activeValue) || "IDR 0"} />
-        <StatCard label="Won value" value={formatIDR(wonValue) || "IDR 0"} tone="text-green-600 dark:text-green-400" />
+        <StatCard label="Active deal value" value={activeValue ? formatIDR(activeValue) : "0"} />
+        <StatCard label="Won value" value={wonValue ? formatIDR(wonValue) : "0"} tone="text-green-600 dark:text-green-400" />
         <StatCard label="Lost" value={lostLeads.length} tone="text-red-500 dark:text-red-400" />
       </div>
 
@@ -909,25 +929,23 @@ export default function Pipeline() {
           />
           <input
             className="input pl-8"
-            placeholder="Search company, project, services..."
+            placeholder="Search company, listing, services"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        {view === "table" && (
-          <select
-            className="input w-auto"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="all">All statuses</option>
-            {Object.entries(STATUS_LABELS).map(([val, label]) => (
-              <option key={val} value={val}>
-                {label}
-              </option>
-            ))}
-          </select>
-        )}
+        <select
+          className="input w-auto"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
+          {view === "table" && <option value="all">All statuses</option>}
+          {Object.entries(STATUS_LABELS).map(([val, label]) => (
+            <option key={val} value={val}>
+              {label}
+            </option>
+          ))}
+        </select>
       </div>
 
       {view === "board" ? (
@@ -961,12 +979,9 @@ export default function Pipeline() {
                       <Plus size={14} />
                     </button>
                   </div>
-                  {stageValue > 0 && (
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-1">
-                      <DollarSign size={10} />
-                      {formatIDR(stageValue)}
-                    </p>
-                  )}
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">
+                    {stageValue ? formatIDR(stageValue) : "0"}
+                  </p>
                   <Droppable droppableId={String(stage.id)}>
                     {(provided, snapshot) => (
                       <div
@@ -992,33 +1007,20 @@ export default function Pipeline() {
                                 }`}
                                 onClick={() => setDetailLeadId(lead.id)}
                               >
-                                <div className="flex items-start justify-between gap-2">
-                                  <div>
-                                    {lead.company && (
-                                      <p className="text-gray-400 dark:text-gray-500 text-[10px] mb-0.5">
-                                        {lead.company}
-                                      </p>
-                                    )}
-                                    <p className="font-medium text-gray-900 dark:text-white leading-snug">
-                                      {lead.title}
-                                    </p>
-                                  </div>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setConfirmId(lead.id);
-                                    }}
-                                    className="text-gray-300 dark:text-gray-500 hover:text-red-400 transition-colors flex-shrink-0 mt-0.5"
-                                  >
-                                    <Trash2 size={12} />
-                                  </button>
+                                <p className="font-medium text-gray-900 dark:text-white leading-snug">
+                                  {lead.company}
+                                </p>
+                                <p className="text-gray-400 dark:text-gray-500 text-[10px] mt-0.5">
+                                  {lead.title}
+                                </p>
+                                <div className="flex items-center justify-between mt-2">
+                                  <span className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300 capitalize">
+                                    {lead.lead_type || "new"}
+                                  </span>
+                                  <span className="text-gray-500 dark:text-gray-400">
+                                    {lead.value ? formatIDR(lead.value) : "0"}
+                                  </span>
                                 </div>
-                                {lead.value > 0 && (
-                                  <p className="text-gray-400 dark:text-gray-400 mt-1.5 flex items-center gap-1">
-                                    <DollarSign size={10} />
-                                    {formatIDR(lead.value)}
-                                  </p>
-                                )}
                               </div>
                             )}
                           </Draggable>
@@ -1081,7 +1083,7 @@ export default function Pipeline() {
                     {lead.stage?.name}
                   </td>
                   <td className="px-4 py-2.5 text-right text-gray-700 dark:text-gray-200">
-                    {formatIDR(lead.value) || "—"}
+                    {lead.value ? formatIDR(lead.value) : "0"}
                   </td>
                 </tr>
               ))}
@@ -1111,13 +1113,6 @@ export default function Pipeline() {
           onClose={() => setDetailLeadId(null)}
           onUpdated={handleUpdated}
           onDeleted={handleDeletedFromPanel}
-        />
-      )}
-      {confirmId && (
-        <ConfirmModal
-          message="Lead will be permanently deleted."
-          onConfirm={() => handleDelete(confirmId)}
-          onCancel={() => setConfirmId(null)}
         />
       )}
     </div>

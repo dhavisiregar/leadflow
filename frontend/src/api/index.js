@@ -24,6 +24,26 @@ export const updateLead = (id, data) => api.put(`/leads/${id}`, data);
 export const deleteLead = (id) => api.delete(`/leads/${id}`);
 export const moveLead = (id, stage_id, close_reason, close_note) =>
   api.patch(`/leads/${id}/stage`, { stage_id, close_reason, close_note });
+export const updateLeadStatus = (id, status, close_reason, close_note) =>
+  api.patch(`/leads/${id}/status`, { status, close_reason, close_note });
+
+// Lead products & services
+export const addLeadService = (leadId, data) =>
+  api.post(`/leads/${leadId}/services`, data);
+export const removeLeadService = (leadId, serviceId) =>
+  api.delete(`/leads/${leadId}/services/${serviceId}`);
+
+// Teams
+export const getTeams = () => api.get("/teams");
+export const createTeam = (data) => api.post("/teams", data);
+export const updateTeam = (id, data) => api.put(`/teams/${id}`, data);
+export const deleteTeam = (id) => api.delete(`/teams/${id}`);
+
+// Team members
+export const getTeamMembers = () => api.get("/team-members");
+export const createTeamMember = (data) => api.post("/team-members", data);
+export const updateTeamMember = (id, data) => api.put(`/team-members/${id}`, data);
+export const deleteTeamMember = (id) => api.delete(`/team-members/${id}`);
 
 // Contacts
 export const getContacts = () => api.get("/contacts");
@@ -42,6 +62,7 @@ export const deleteActivity = (leadId, activityId) =>
 
 // Dashboard
 export const getStats = () => api.get("/dashboard/stats");
+export const getAnalytics = (params) => api.get("/dashboard/analytics", { params });
 
 // Tasks
 export const getTasks = (params) => api.get("/tasks", { params });

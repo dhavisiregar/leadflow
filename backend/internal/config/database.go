@@ -25,13 +25,19 @@ func NewDB(cfg *Config) (*gorm.DB, error) {
 	// Auto-migrate all models
 	if err := db.AutoMigrate(
 		&model.Tenant{},
+		&model.Team{},
 		&model.User{},
 		&model.Contact{},
 		&model.Stage{},
 		&model.Lead{},
+		&model.LeadService{},
 		&model.Activity{},
 		&model.Task{},
 	); err != nil {
+		return nil, err
+	}
+
+	if err := MigrateToBRDPipeline(db); err != nil {
 		return nil, err
 	}
 

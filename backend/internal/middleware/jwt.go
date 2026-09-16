@@ -12,9 +12,9 @@ import (
 )
 
 type JWTClaims struct {
-	UserID   uint        `json:"user_id"`
-	TenantID uint        `json:"tenant_id"`
-	Role     model.Role  `json:"role"`
+	UserID   uint       `json:"user_id"`
+	TenantID uint       `json:"tenant_id"`
+	Role     model.Role `json:"role"`
 	jwt.RegisteredClaims
 }
 
@@ -89,4 +89,50 @@ func RequireOwner(next echo.HandlerFunc) echo.HandlerFunc {
 		}
 		return next(c)
 	}
+}
+
+// RequireRole restricts a route to one of the given roles.
+func RequireRole(roles ...model.Role) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			role := c.Get("role").(model.Role)
+			for _, r := range roles {
+				if role == r {
+					return next(c)
+				}
+			}
+			return echo.NewHTTPError(http.StatusForbidden, "insufficient permissions")
+		}
+	}
+}
+
+// ScopeLeadsByRole narrows a leads query to what the given role/user is
+// allowed to see, per the BRD's org hierarchy:
+//   - sales / member: only their own leads
+//   - unit_head: leads owned by Sales reps on the team they lead
+//   - manager: leads owned by Sales/Unit Head users on teams they manage
+//   - data_analyst / owner: no restriction (full tenant)
+func ScopeLeadsByRole(db *gorm.DB, role model.Role, userID uint) *gorm.DB {
+	switch role {
+	case model.RoleSales, model.RoleMember:
+		return db.Where("leads.owner_id = ?", userID)
+	case model.RoleUnitHead:
+		return db.Where(
+			"leads.owner_id IN (SELECT id FROM users WHERE team_id IN (SELECT id FROM teams WHERE unit_head_id = ?))",
+			userID,
+		)
+	case model.RoleManager:
+		return db.Where(
+			"leads.owner_id IN (SELECT id FROM users WHERE team_id IN (SELECT id FROM teams WHERE manager_id = ?))",
+			userID,
+		)
+	default: // data_analyst, owner
+		return db
+	}
+}
+
+// CanManageLeads reports whether the role is allowed to create/edit/delete
+// leads (the BRD's "Eksekutor Operasional") — everyone else is read-only.
+func CanManageLeads(role model.Role) bool {
+	return role == model.RoleOwner || role == model.RoleSales
 }

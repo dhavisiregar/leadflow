@@ -8,6 +8,7 @@ import (
 	"github.com/dhavi/leadflow/internal/handler"
 	"github.com/dhavi/leadflow/internal/job"
 	mw "github.com/dhavi/leadflow/internal/middleware"
+	"github.com/dhavi/leadflow/internal/model"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
@@ -41,6 +42,7 @@ func main() {
 	// ── Handlers ──────────────────────────────────────────────────────────────
 	authH := &handler.AuthHandler{DB: db, JWTSecret: cfg.JWTSecret, JWTExpiresHrs: cfg.JWTExpiresHours, GoogleClientID: cfg.GoogleClientID}
 	leadH := &handler.LeadHandler{DB: db}
+	leadServiceH := &handler.LeadServiceHandler{DB: db}
 	contactH := &handler.ContactHandler{DB: db}
 	activityH := &handler.ActivityHandler{DB: db}
 	dashH := &handler.DashboardHandler{DB: db}
@@ -48,6 +50,8 @@ func main() {
 	planH := &handler.PlanHandler{DB: db}
 	taskH := &handler.TaskHandler{DB: db}
 	reportH := &handler.ReportHandler{DB: db}
+	teamH := &handler.TeamHandler{DB: db}
+	teamMemberH := &handler.TeamMemberHandler{DB: db}
 	paymentH := &handler.PaymentHandler{
 		DB:         db,
 		ServerKey:  cfg.MidtransServerKey,
@@ -76,6 +80,7 @@ func main() {
 	protected.GET("/auth/me", authH.Me)
 
 	protected.GET("/dashboard/stats", dashH.Stats)
+	protected.GET("/dashboard/analytics", dashH.Analytics)
 
 	protected.GET("/plan", planH.Get)
 	protected.POST("/plan/downgrade", planH.Downgrade)
@@ -90,6 +95,20 @@ func main() {
 	protected.PUT("/leads/:id", leadH.Update)
 	protected.DELETE("/leads/:id", leadH.Delete)
 	protected.PATCH("/leads/:id/stage", leadH.MoveStage)
+	protected.PATCH("/leads/:id/status", leadH.UpdateStatus)
+
+	protected.POST("/leads/:id/services", leadServiceH.Create)
+	protected.DELETE("/leads/:id/services/:service_id", leadServiceH.Delete)
+
+	protected.GET("/teams", teamH.List, mw.RequireRole(model.RoleOwner))
+	protected.POST("/teams", teamH.Create, mw.RequireRole(model.RoleOwner))
+	protected.PUT("/teams/:id", teamH.Update, mw.RequireRole(model.RoleOwner))
+	protected.DELETE("/teams/:id", teamH.Delete, mw.RequireRole(model.RoleOwner))
+
+	protected.GET("/team-members", teamMemberH.List, mw.RequireRole(model.RoleOwner))
+	protected.POST("/team-members", teamMemberH.Create, mw.RequireRole(model.RoleOwner))
+	protected.PUT("/team-members/:id", teamMemberH.Update, mw.RequireRole(model.RoleOwner))
+	protected.DELETE("/team-members/:id", teamMemberH.Delete, mw.RequireRole(model.RoleOwner))
 
 	protected.GET("/leads/:id/activities", activityH.List)
 	protected.POST("/leads/:id/activities", activityH.Create)

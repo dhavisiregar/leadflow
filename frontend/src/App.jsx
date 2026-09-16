@@ -10,6 +10,8 @@ import Contacts from './pages/Contacts'
 import Billing from './pages/Billing'
 import Tasks from './pages/Tasks'
 import Reports from './pages/Reports'
+import Analytics from './pages/Analytics'
+import TeamMembers from './pages/TeamMembers'
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -21,6 +23,11 @@ function PublicRoute({ children }) {
   const { user, loading } = useAuth()
   if (loading) return null
   return user ? <Navigate to="/" replace /> : children
+}
+
+function RoleRoute({ roles, children }) {
+  const { user } = useAuth()
+  return roles.includes(user?.role) ? children : <Navigate to="/" replace />
 }
 
 export default function App() {
@@ -38,6 +45,22 @@ export default function App() {
             <Route path="contacts" element={<Contacts />} />
             <Route path="reports" element={<Reports />} />
             <Route path="billing" element={<Billing />} />
+            <Route
+              path="analytics"
+              element={
+                <RoleRoute roles={['owner', 'unit_head', 'manager', 'data_analyst']}>
+                  <Analytics />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="team-members"
+              element={
+                <RoleRoute roles={['owner']}>
+                  <TeamMembers />
+                </RoleRoute>
+              }
+            />
           </Route>
         </Routes>
       </BrowserRouter>

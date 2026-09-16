@@ -33,8 +33,12 @@ type Tenant struct {
 type Role string
 
 const (
-	RoleOwner  Role = "owner"
-	RoleMember Role = "member"
+	RoleOwner       Role = "owner"
+	RoleMember      Role = "member"
+	RoleSales       Role = "sales"
+	RoleUnitHead    Role = "unit_head"
+	RoleManager     Role = "manager"
+	RoleDataAnalyst Role = "data_analyst"
 )
 
 type User struct {
@@ -45,9 +49,29 @@ type User struct {
 	Email     string         `gorm:"uniqueIndex;not null" json:"email"`
 	Password  string         `gorm:"not null" json:"-"`
 	Role      Role           `gorm:"default:'member'" json:"role"`
+	TeamID    *uint          `json:"team_id"`
+	Team      *Team          `gorm:"foreignKey:TeamID;constraint:-" json:"team,omitempty"`
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
+// ── Team ──────────────────────────────────────────────────────────────────────
+
+// Team groups Sales reps under a Unit Head, with a Manager overseeing one or
+// more teams. Sales users are assigned via User.TeamID; Unit Head/Manager are
+// looked up in reverse via Team.UnitHeadID/ManagerID.
+type Team struct {
+	ID         uint           `gorm:"primaryKey" json:"id"`
+	TenantID   uint           `gorm:"not null;index" json:"tenant_id"`
+	Name       string         `gorm:"not null" json:"name"`
+	ManagerID  *uint          `json:"manager_id"`
+	Manager    *User          `gorm:"foreignKey:ManagerID;constraint:-" json:"manager,omitempty"`
+	UnitHeadID *uint          `json:"unit_head_id"`
+	UnitHead   *User          `gorm:"foreignKey:UnitHeadID;constraint:-" json:"unit_head,omitempty"`
+	CreatedAt  time.Time      `json:"created_at"`
+	UpdatedAt  time.Time      `json:"updated_at"`
+	DeletedAt  gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 // ── Contact ───────────────────────────────────────────────────────────────────
@@ -77,6 +101,17 @@ type Stage struct {
 
 // ── Lead ──────────────────────────────────────────────────────────────────────
 
+// LeadStatus tracks the BRD's Active/On Hold/Won/Lost state, independent of
+// which of the 6 pipeline stages the lead currently sits in.
+type LeadStatus string
+
+const (
+	LeadStatusActive LeadStatus = "active"
+	LeadStatusOnHold LeadStatus = "on_hold"
+	LeadStatusWon    LeadStatus = "won"
+	LeadStatusLost   LeadStatus = "lost"
+)
+
 type Lead struct {
 	ID             uint           `gorm:"primaryKey" json:"id"`
 	TenantID       uint           `gorm:"not null;index" json:"tenant_id"`
@@ -87,7 +122,12 @@ type Lead struct {
 	OwnerID        uint           `gorm:"not null" json:"owner_id"`
 	Owner          *User          `gorm:"foreignKey:OwnerID" json:"owner,omitempty"`
 	Title          string         `gorm:"not null" json:"title"`
+	Company        string         `json:"company"`
+	LeadType       string         `gorm:"default:'new'" json:"lead_type"` // "new" | "existing"
+	Source         string         `json:"source"`
+	Status         LeadStatus     `gorm:"default:'active';index" json:"status"`
 	Value          float64        `gorm:"default:0" json:"value"`
+	Services       []LeadService  `gorm:"foreignKey:LeadID" json:"services,omitempty"`
 	Notes          string         `json:"notes"`
 	CloseReason    string         `json:"close_reason"`
 	CloseNote      string         `json:"close_note"`
@@ -95,6 +135,19 @@ type Lead struct {
 	CreatedAt      time.Time      `json:"created_at"`
 	UpdatedAt      time.Time      `json:"updated_at"`
 	DeletedAt      gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
+// ── Lead Service (Products & Services line items) ───────────────────────────────
+
+// LeadService is one product/service line item on a lead; the sum of all of a
+// lead's services is kept in sync with Lead.Value once any exist.
+type LeadService struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	LeadID    uint      `gorm:"not null;index" json:"lead_id"`
+	Name      string    `gorm:"not null" json:"name"`
+	Value     float64   `gorm:"default:0" json:"value"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // ── Task ──────────────────────────────────────────────────────────────────────

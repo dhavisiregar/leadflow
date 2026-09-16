@@ -4,18 +4,31 @@ import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
 import {
   LayoutDashboard, Kanban, Users, LogOut, Zap, CreditCard,
-  CheckSquare, BarChart2, Menu, X, Sun, Moon,
+  CheckSquare, BarChart2, Menu, X, Sun, Moon, UsersRound,
 } from 'lucide-react'
 import { getPlan } from '../../api'
 
-const nav = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard', end: true },
-  { to: '/pipeline', icon: Kanban, label: 'Pipeline' },
-  { to: '/tasks', icon: CheckSquare, label: 'Tasks' },
-  { to: '/contacts', icon: Users, label: 'Contacts' },
-  { to: '/reports', icon: BarChart2, label: 'Reports' },
-  { to: '/billing', icon: CreditCard, label: 'Billing' },
-]
+const PIPELINE_LABELS = {
+  sales: 'My Pipeline',
+  owner: 'Pipeline',
+}
+
+function navFor(role) {
+  return [
+    { to: '/', icon: LayoutDashboard, label: 'Dashboard', end: true },
+    { to: '/pipeline', icon: Kanban, label: PIPELINE_LABELS[role] || 'Team Pipeline' },
+    ...(['owner', 'unit_head', 'manager', 'data_analyst'].includes(role)
+      ? [{ to: '/analytics', icon: BarChart2, label: 'Analytics' }]
+      : []),
+    { to: '/tasks', icon: CheckSquare, label: 'Tasks' },
+    { to: '/contacts', icon: Users, label: 'Contacts' },
+    { to: '/reports', icon: BarChart2, label: 'Reports' },
+    ...(role === 'owner'
+      ? [{ to: '/team-members', icon: UsersRound, label: 'Team Members' }]
+      : []),
+    { to: '/billing', icon: CreditCard, label: 'Billing' },
+  ]
+}
 
 export default function Layout() {
   const { user, signOut } = useAuth()
@@ -23,6 +36,7 @@ export default function Layout() {
   const navigate = useNavigate()
   const [planData, setPlanData] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const nav = navFor(user?.role)
 
   useEffect(() => {
     getPlan().then(res => setPlanData(res.data)).catch(() => {})

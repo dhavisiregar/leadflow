@@ -42,11 +42,12 @@ func seedTenantAndOwner(tx *gorm.DB, tenantName, slug, userName, email, hashedPa
 	}
 
 	stages := []model.Stage{
-		{TenantID: tenant.ID, Name: "New Lead", Order: 1, Color: "#718096"},
-		{TenantID: tenant.ID, Name: "Contacted", Order: 2, Color: "#3182CE"},
-		{TenantID: tenant.ID, Name: "Negotiation", Order: 3, Color: "#D69E2E"},
-		{TenantID: tenant.ID, Name: "Won", Order: 4, Color: "#38A169"},
-		{TenantID: tenant.ID, Name: "Lost", Order: 5, Color: "#E53E3E"},
+		{TenantID: tenant.ID, Name: "Initial Meeting", Order: 1, Color: "#718096"},
+		{TenantID: tenant.ID, Name: "Requirement, Assessment, POC", Order: 2, Color: "#3182CE"},
+		{TenantID: tenant.ID, Name: "Quotation", Order: 3, Color: "#805AD5"},
+		{TenantID: tenant.ID, Name: "Negotiation", Order: 4, Color: "#D69E2E"},
+		{TenantID: tenant.ID, Name: "PO", Order: 5, Color: "#DD6B20"},
+		{TenantID: tenant.ID, Name: "Invoiced", Order: 6, Color: "#38A169"},
 	}
 	if err := tx.Create(&stages).Error; err != nil {
 		return model.User{}, echo.NewHTTPError(http.StatusInternalServerError, "failed to seed stages")
@@ -58,10 +59,10 @@ func seedTenantAndOwner(tx *gorm.DB, tenantName, slug, userName, email, hashedPa
 // ── Register ──────────────────────────────────────────────────────────────────
 
 type RegisterRequest struct {
-	Name         string `json:"name" validate:"required"`
-	Email        string `json:"email" validate:"required,email"`
-	Password     string `json:"password" validate:"required,min=8"`
-	TenantName   string `json:"tenant_name" validate:"required"`
+	Name       string `json:"name" validate:"required"`
+	Email      string `json:"email" validate:"required,email"`
+	Password   string `json:"password" validate:"required,min=8"`
+	TenantName string `json:"tenant_name" validate:"required"`
 }
 
 // POST /api/v1/auth/register

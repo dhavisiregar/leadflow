@@ -38,7 +38,13 @@ const CLOSE_REASONS = [
   "Other",
 ];
 
-const SOURCE_OPTIONS = ["Referral", "Website", "Cold Outreach", "Event", "Other"];
+const SOURCE_OPTIONS = [
+  "Referral",
+  "Website",
+  "Cold Outreach",
+  "Event",
+  "Other",
+];
 
 const STATUS_LABELS = {
   active: "Active",
@@ -49,7 +55,8 @@ const STATUS_LABELS = {
 
 const STATUS_COLORS = {
   active: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400",
-  on_hold: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400",
+  on_hold:
+    "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400",
   won: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400",
   lost: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400",
 };
@@ -87,7 +94,9 @@ function StatCard({ label, value, tone }) {
   return (
     <div className="px-4 py-3">
       <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">{label}</p>
-      <p className={`text-lg font-semibold ${tone || "text-gray-900 dark:text-white"}`}>
+      <p
+        className={`text-lg font-semibold ${tone || "text-gray-900 dark:text-white"}`}
+      >
         {value}
       </p>
     </div>
@@ -239,7 +248,9 @@ function AddLeadModal({ stageId, onClose, onCreated }) {
               <select
                 className="input"
                 value={form.lead_type}
-                onChange={(e) => setForm({ ...form, lead_type: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, lead_type: e.target.value })
+                }
               >
                 <option value="new">New</option>
                 <option value="existing">Existing</option>
@@ -320,9 +331,12 @@ function LeadPanel({ leadId, stages, onClose, onUpdated, onDeleted }) {
   }, [leadId]);
 
   const quotationStage = stages.find((s) => s.name === "Quotation");
-  const currentDraftStage = stages.find((s) => s.id === parseInt(form?.stage_id));
+  const currentDraftStage = stages.find(
+    (s) => s.id === parseInt(form?.stage_id),
+  );
   const servicesUnlocked =
-    !quotationStage || (currentDraftStage && currentDraftStage.order >= quotationStage.order);
+    !quotationStage ||
+    (currentDraftStage && currentDraftStage.order >= quotationStage.order);
 
   const handleSave = async () => {
     setSaving(true);
@@ -346,7 +360,12 @@ function LeadPanel({ leadId, stages, onClose, onUpdated, onDeleted }) {
 
   const applyStatus = async (status, reason = "", note = "") => {
     const res = await updateLeadStatus(lead.id, status, reason, note);
-    const updatedLead = { ...lead, status: res.data.status, close_reason: reason, close_note: note };
+    const updatedLead = {
+      ...lead,
+      status: res.data.status,
+      close_reason: reason,
+      close_note: note,
+    };
     setLead(updatedLead);
     onUpdated(updatedLead);
   };
@@ -398,8 +417,14 @@ function LeadPanel({ leadId, stages, onClose, onUpdated, onDeleted }) {
     if (!editingActivity.note.trim()) return;
     setActSubmitting(true);
     try {
-      const res = await updateActivity(leadId, activityId, editingActivity.note);
-      setActivities((prev) => prev.map((a) => (a.id === activityId ? res.data : a)));
+      const res = await updateActivity(
+        leadId,
+        activityId,
+        editingActivity.note,
+      );
+      setActivities((prev) =>
+        prev.map((a) => (a.id === activityId ? res.data : a)),
+      );
       setEditingActivity(null);
     } finally {
       setActSubmitting(false);
@@ -408,11 +433,16 @@ function LeadPanel({ leadId, stages, onClose, onUpdated, onDeleted }) {
 
   const confirmDeleteActivity = async () => {
     await deleteActivity(leadId, confirmDeleteActivityId);
-    setActivities((prev) => prev.filter((a) => a.id !== confirmDeleteActivityId));
+    setActivities((prev) =>
+      prev.filter((a) => a.id !== confirmDeleteActivityId),
+    );
     setConfirmDeleteActivityId(null);
   };
 
-  const totalServiceValue = (lead?.services || []).reduce((s, x) => s + (x.value || 0), 0);
+  const totalServiceValue = (lead?.services || []).reduce(
+    (s, x) => s + (x.value || 0),
+    0,
+  );
 
   return (
     <div className="fixed inset-0 z-40 flex justify-end">
@@ -420,7 +450,9 @@ function LeadPanel({ leadId, stages, onClose, onUpdated, onDeleted }) {
       <div className="w-full max-w-md bg-white dark:bg-gray-800 shadow-2xl flex flex-col border-l border-gray-200 dark:border-gray-700">
         <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Edit lead</h2>
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
+              Edit lead
+            </h2>
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
@@ -429,7 +461,9 @@ function LeadPanel({ leadId, stages, onClose, onUpdated, onDeleted }) {
             </button>
           </div>
           {lead?.owner?.name && (
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Owner: {lead.owner.name}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+              Owner: {lead.owner.name}
+            </p>
           )}
         </div>
 
@@ -447,17 +481,25 @@ function LeadPanel({ leadId, stages, onClose, onUpdated, onDeleted }) {
 
             {/* Lead info */}
             <div className="space-y-3">
-              <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">Lead info</p>
+              <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">
+                Lead info
+              </p>
               <div>
-                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Company</label>
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Company
+                </label>
                 <input
                   className="input"
                   value={form.company}
-                  onChange={(e) => setForm({ ...form, company: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, company: e.target.value })
+                  }
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Project name</label>
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Project name
+                </label>
                 <input
                   className="input"
                   value={form.title}
@@ -466,22 +508,30 @@ function LeadPanel({ leadId, stages, onClose, onUpdated, onDeleted }) {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">New / Existing</label>
+                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    New / Existing
+                  </label>
                   <select
                     className="input"
                     value={form.lead_type}
-                    onChange={(e) => setForm({ ...form, lead_type: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, lead_type: e.target.value })
+                    }
                   >
                     <option value="new">New</option>
                     <option value="existing">Existing</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Source of lead</label>
+                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    Source of lead
+                  </label>
                   <select
                     className="input"
                     value={form.source}
-                    onChange={(e) => setForm({ ...form, source: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, source: e.target.value })
+                    }
                   >
                     <option value="">— Select —</option>
                     {SOURCE_OPTIONS.map((s) => (
@@ -496,10 +546,14 @@ function LeadPanel({ leadId, stages, onClose, onUpdated, onDeleted }) {
 
             {/* Pipeline */}
             <div className="space-y-3 border-t border-gray-100 dark:border-gray-700 pt-4">
-              <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">Pipeline</p>
+              <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">
+                Pipeline
+              </p>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Status</label>
+                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    Status
+                  </label>
                   <select
                     className="input"
                     value={lead.status}
@@ -513,11 +567,15 @@ function LeadPanel({ leadId, stages, onClose, onUpdated, onDeleted }) {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Pipeline stage</label>
+                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    Pipeline stage
+                  </label>
                   <select
                     className="input"
                     value={form.stage_id}
-                    onChange={(e) => setForm({ ...form, stage_id: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, stage_id: e.target.value })
+                    }
                   >
                     {stages.map((s) => (
                       <option key={s.id} value={s.id}>
@@ -527,22 +585,26 @@ function LeadPanel({ leadId, stages, onClose, onUpdated, onDeleted }) {
                   </select>
                 </div>
               </div>
-              {(lead.status === "won" || lead.status === "lost") && lead.close_reason && (
-                <div
-                  className={`rounded-lg p-3 text-xs ${
-                    lead.status === "won"
-                      ? "bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800"
-                      : "bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800"
-                  }`}
-                >
-                  <p className="font-medium text-gray-700 dark:text-gray-200">
-                    {lead.status === "won" ? "Win reason" : "Loss reason"}: {lead.close_reason}
-                  </p>
-                  {lead.close_note && (
-                    <p className="text-gray-500 dark:text-gray-400 mt-0.5">{lead.close_note}</p>
-                  )}
-                </div>
-              )}
+              {(lead.status === "won" || lead.status === "lost") &&
+                lead.close_reason && (
+                  <div
+                    className={`rounded-lg p-3 text-xs ${
+                      lead.status === "won"
+                        ? "bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800"
+                        : "bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800"
+                    }`}
+                  >
+                    <p className="font-medium text-gray-700 dark:text-gray-200">
+                      {lead.status === "won" ? "Win reason" : "Loss reason"}:{" "}
+                      {lead.close_reason}
+                    </p>
+                    {lead.close_note && (
+                      <p className="text-gray-500 dark:text-gray-400 mt-0.5">
+                        {lead.close_note}
+                      </p>
+                    )}
+                  </div>
+                )}
             </div>
 
             {/* Products & services */}
@@ -567,7 +629,9 @@ function LeadPanel({ leadId, stages, onClose, onUpdated, onDeleted }) {
                           key={svc.id}
                           className="flex items-center justify-between text-xs bg-gray-50 dark:bg-gray-700/50 rounded px-2.5 py-1.5"
                         >
-                          <span className="text-gray-700 dark:text-gray-200">{svc.name}</span>
+                          <span className="text-gray-700 dark:text-gray-200">
+                            {svc.name}
+                          </span>
                           <div className="flex items-center gap-2">
                             <span className="text-gray-500 dark:text-gray-400">
                               {formatIDR(svc.value) || "IDR 0"}
@@ -619,7 +683,11 @@ function LeadPanel({ leadId, stages, onClose, onUpdated, onDeleted }) {
               <button className="btn-secondary flex-1" onClick={onClose}>
                 Cancel
               </button>
-              <button className="btn-primary flex-1" onClick={handleSave} disabled={saving}>
+              <button
+                className="btn-primary flex-1"
+                onClick={handleSave}
+                disabled={saving}
+              >
                 {saving ? "Saving..." : "Save"}
               </button>
             </div>
@@ -669,7 +737,10 @@ function LeadPanel({ leadId, stages, onClose, onUpdated, onDeleted }) {
                               rows={2}
                               value={editingActivity.note}
                               onChange={(e) =>
-                                setEditingActivity({ ...editingActivity, note: e.target.value })
+                                setEditingActivity({
+                                  ...editingActivity,
+                                  note: e.target.value,
+                                })
                               }
                             />
                             <div className="flex gap-1">
@@ -690,14 +761,19 @@ function LeadPanel({ leadId, stages, onClose, onUpdated, onDeleted }) {
                         ) : (
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
-                              <p className="text-xs text-gray-800 dark:text-gray-200 leading-snug">{act.note}</p>
+                              <p className="text-xs text-gray-800 dark:text-gray-200 leading-snug">
+                                {act.note}
+                              </p>
                               <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
                                 {act.created_by?.name} ·{" "}
-                                {new Date(act.created_at).toLocaleDateString("id-ID", {
-                                  day: "2-digit",
-                                  month: "short",
-                                  year: "numeric",
-                                })}
+                                {new Date(act.created_at).toLocaleDateString(
+                                  "id-ID",
+                                  {
+                                    day: "2-digit",
+                                    month: "short",
+                                    year: "numeric",
+                                  },
+                                )}
                               </p>
                             </div>
                             <div className="flex gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -708,7 +784,9 @@ function LeadPanel({ leadId, stages, onClose, onUpdated, onDeleted }) {
                                 <Pencil size={12} />
                               </button>
                               <button
-                                onClick={() => setConfirmDeleteActivityId(act.id)}
+                                onClick={() =>
+                                  setConfirmDeleteActivityId(act.id)
+                                }
                                 className="text-gray-400 dark:text-gray-500 hover:text-red-400 transition-colors p-0.5"
                               >
                                 <Trash2 size={12} />
@@ -791,31 +869,51 @@ export default function Pipeline() {
       .finally(() => setLoading(false));
   }, []);
 
-  const activeLeads = useMemo(() => leads.filter((l) => l.status === "active"), [leads]);
-  const wonLeads = useMemo(() => leads.filter((l) => l.status === "won"), [leads]);
-  const lostLeads = useMemo(() => leads.filter((l) => l.status === "lost"), [leads]);
+  const activeLeads = useMemo(
+    () => leads.filter((l) => l.status === "active"),
+    [leads],
+  );
+  const wonLeads = useMemo(
+    () => leads.filter((l) => l.status === "won"),
+    [leads],
+  );
+  const lostLeads = useMemo(
+    () => leads.filter((l) => l.status === "lost"),
+    [leads],
+  );
   const activeValue = useMemo(
     () => activeLeads.reduce((s, l) => s + (l.value || 0), 0),
     [activeLeads],
   );
-  const wonValue = useMemo(() => wonLeads.reduce((s, l) => s + (l.value || 0), 0), [wonLeads]);
+  const wonValue = useMemo(
+    () => wonLeads.reduce((s, l) => s + (l.value || 0), 0),
+    [wonLeads],
+  );
 
   const tableLeads = useMemo(() => {
     return leads
-      .filter((l) => (statusFilter === "all" ? true : l.status === statusFilter))
+      .filter((l) =>
+        statusFilter === "all" ? true : l.status === statusFilter,
+      )
       .filter((l) => matchesSearch(l, search));
   }, [leads, statusFilter, search]);
 
   const leadsByStage = (stageId) =>
-    activeLeads.filter((l) => l.stage_id === stageId).filter((l) => matchesSearch(l, search));
+    activeLeads
+      .filter((l) => l.stage_id === stageId)
+      .filter((l) => matchesSearch(l, search));
 
   const doMove = async (leadId, newStageId) => {
     const prev = leads.find((l) => l.id === leadId)?.stage_id;
-    setLeads((ls) => ls.map((l) => (l.id === leadId ? { ...l, stage_id: newStageId } : l)));
+    setLeads((ls) =>
+      ls.map((l) => (l.id === leadId ? { ...l, stage_id: newStageId } : l)),
+    );
     try {
       await moveLead(leadId, newStageId);
     } catch {
-      setLeads((ls) => ls.map((l) => (l.id === leadId ? { ...l, stage_id: prev } : l)));
+      setLeads((ls) =>
+        ls.map((l) => (l.id === leadId ? { ...l, stage_id: prev } : l)),
+      );
     }
   };
 
@@ -840,8 +938,20 @@ export default function Pipeline() {
 
   const handleLoadDemoData = async () => {
     const demo = [
-      { company: "PT Sinar Jaya", title: "Company website redesign", lead_type: "new", source: "Referral", stage_id: stages[0]?.id },
-      { company: "CV Makmur Abadi", title: "Internal HR system", lead_type: "existing", source: "Website", stage_id: stages[1]?.id || stages[0]?.id },
+      {
+        company: "PT Sinar Jaya",
+        title: "Company website redesign",
+        lead_type: "new",
+        source: "Referral",
+        stage_id: stages[0]?.id,
+      },
+      {
+        company: "CV Makmur Abadi",
+        title: "Internal HR system",
+        lead_type: "existing",
+        source: "Website",
+        stage_id: stages[1]?.id || stages[0]?.id,
+      },
     ];
     for (const d of demo) {
       if (!d.stage_id) continue;
@@ -852,23 +962,36 @@ export default function Pipeline() {
 
   if (loading)
     return (
-      <div className="p-8 text-sm text-gray-400 dark:text-gray-500">Loading pipeline...</div>
+      <div className="p-8 text-sm text-gray-400 dark:text-gray-500">
+        Loading pipeline...
+      </div>
     );
 
   return (
     <div className="p-4 sm:p-8">
       <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">My Pipeline</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{leads.length} leads</p>
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
+            My Pipeline
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+            {leads.length} leads
+          </p>
         </div>
         <div className="flex flex-col items-end gap-2">
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            <span className="font-medium text-gray-700 dark:text-gray-200">{user?.name}</span>
+            <span className="font-medium text-gray-700 dark:text-gray-200">
+              {user?.name}
+            </span>
             <span className="mx-1">·</span>
-            <span className="capitalize">{(user?.role || "").replace("_", " ")}</span>
+            <span className="capitalize">
+              {(user?.role || "").replace("_", " ")}
+            </span>
             <span className="mx-1">·</span>
-            <button onClick={handleSignOut} className="underline hover:text-brand-600">
+            <button
+              onClick={handleSignOut}
+              className="underline hover:text-brand-600"
+            >
               not you?
             </button>
           </p>
@@ -895,9 +1018,9 @@ export default function Pipeline() {
                 <ListIcon size={13} /> Table
               </button>
             </div>
-            <button className="btn-secondary" onClick={handleLoadDemoData}>
+            {/* <button className="btn-secondary" onClick={handleLoadDemoData}>
               Load demo data
-            </button>
+            </button> */}
             <button
               className="btn-primary flex items-center gap-2"
               onClick={() => {
@@ -905,7 +1028,8 @@ export default function Pipeline() {
                 setShowModal(true);
               }}
             >
-              <Plus size={14} /> <span className="hidden sm:inline">Add lead</span>
+              <Plus size={14} />{" "}
+              <span className="hidden sm:inline">Add lead</span>
               <span className="sm:hidden">Add</span>
             </button>
           </div>
@@ -915,9 +1039,20 @@ export default function Pipeline() {
       {/* Stat cards */}
       <div className="card grid grid-cols-2 lg:grid-cols-4 divide-x divide-gray-100 dark:divide-gray-700 mb-6">
         <StatCard label="Active leads" value={activeLeads.length} />
-        <StatCard label="Active deal value" value={activeValue ? formatIDR(activeValue) : "0"} />
-        <StatCard label="Won value" value={wonValue ? formatIDR(wonValue) : "0"} tone="text-green-600 dark:text-green-400" />
-        <StatCard label="Lost" value={lostLeads.length} tone="text-red-500 dark:text-red-400" />
+        <StatCard
+          label="Active deal value"
+          value={activeValue ? formatIDR(activeValue) : "0"}
+        />
+        <StatCard
+          label="Won value"
+          value={wonValue ? formatIDR(wonValue) : "0"}
+          tone="text-green-600 dark:text-green-400"
+        />
+        <StatCard
+          label="Lost"
+          value={lostLeads.length}
+          tone="text-red-500 dark:text-red-400"
+        />
       </div>
 
       {/* Search + status filter */}
@@ -953,7 +1088,10 @@ export default function Pipeline() {
           <div className="flex gap-4 overflow-x-auto pb-4 px-1 scrollbar-visible">
             {stages.map((stage) => {
               const stageLeads = leadsByStage(stage.id);
-              const stageValue = stageLeads.reduce((sum, l) => sum + (l.value || 0), 0);
+              const stageValue = stageLeads.reduce(
+                (sum, l) => sum + (l.value || 0),
+                0,
+              );
               return (
                 <div key={stage.id} className="flex-shrink-0 w-80">
                   <div className="flex items-center justify-between mb-3">
@@ -994,7 +1132,11 @@ export default function Pipeline() {
                         }`}
                       >
                         {stageLeads.map((lead, index) => (
-                          <Draggable key={lead.id} draggableId={String(lead.id)} index={index}>
+                          <Draggable
+                            key={lead.id}
+                            draggableId={String(lead.id)}
+                            index={index}
+                          >
                             {(provided, snapshot) => (
                               <div
                                 ref={provided.innerRef}
@@ -1051,7 +1193,9 @@ export default function Pipeline() {
                 <th className="px-4 py-2.5 font-medium">New/Existing</th>
                 <th className="px-4 py-2.5 font-medium">Source</th>
                 <th className="px-4 py-2.5 font-medium">Stage</th>
-                <th className="px-4 py-2.5 font-medium text-right">Deal value</th>
+                <th className="px-4 py-2.5 font-medium text-right">
+                  Deal value
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -1071,7 +1215,9 @@ export default function Pipeline() {
                     {lead.title}
                   </td>
                   <td className="px-4 py-2.5 text-gray-500 dark:text-gray-400">
-                    {lead.services?.length ? `${lead.services.length} service(s)` : "—"}
+                    {lead.services?.length
+                      ? `${lead.services.length} service(s)`
+                      : "—"}
                   </td>
                   <td className="px-4 py-2.5 text-gray-500 dark:text-gray-400 capitalize">
                     {lead.lead_type || "new"}
@@ -1089,7 +1235,10 @@ export default function Pipeline() {
               ))}
               {tableLeads.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="text-center py-8 text-gray-400 dark:text-gray-500">
+                  <td
+                    colSpan={8}
+                    className="text-center py-8 text-gray-400 dark:text-gray-500"
+                  >
                     No leads match this filter.
                   </td>
                 </tr>
